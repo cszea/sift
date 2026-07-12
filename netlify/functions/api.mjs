@@ -112,7 +112,9 @@ async function ensureBootstrap(store) {
 export default async (req) => {
   const url = new URL(req.url);
   const path = url.pathname.replace(/\/+$/, "");
-  const store = getStore(STORE);
+  // strong consistency so a read right after a write (e.g. login reading a
+  // just-created user) always sees the latest value. (list() stays eventual.)
+  const store = getStore({ name: STORE, consistency: "strong" });
   try {
     await ensureBootstrap(store);
 
