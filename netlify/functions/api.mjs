@@ -18,19 +18,10 @@ import crypto from "node:crypto";
 
 const STORE = "reelbank";
 const ROLES = ["admin", "importer", "viewer"];
+const FORMATS = ["Hair transformations", "High-effort UGC", "IRL", "UGC shoots", "Yaps"];
 const DAY = 24 * 60 * 60 * 1000;
 
-const SEED = {
-  feed: [
-    { id: "seed1", platform: "tiktok", title: "Slow-mo gym transformation reveal", author: "@peakform", desc: "Dramatic before/after with a beat drop on the reveal. Clean lighting.", img: "" },
-    { id: "seed2", platform: "reels",  title: "Get-ready-with-me, one take",       author: "@maya.rl",  desc: "Handheld GRWM, natural light, subtle captions. Very authentic UGC energy.", img: "" },
-    { id: "seed3", platform: "shorts", title: "Street interview: \"what's your routine?\"", author: "@askthecity", desc: "Fast cuts between strangers, bold on-screen questions.", img: "" },
-    { id: "seed4", platform: "tiktok", title: "Cinematic sunrise run, drone open",  author: "@ridgeline", desc: "Moody amber grade, orchestral swell, product in frame at 0:04.", img: "" },
-    { id: "seed5", platform: "reels",  title: "POV desk-setup routine ASMR",        author: "@quietdesk", desc: "No talking, ambient sound design, satisfying pacing.", img: "" }
-  ],
-  bank: {},
-  passed: []
-};
+const SEED = { feed: [], bank: {}, passed: [], archive: {} };
 
 /* ------------------------------- crypto -------------------------------- */
 function hashPassword(password, saltHex) {
@@ -77,7 +68,11 @@ async function listUsers(store) {
   for (const b of blobs) { const u = await store.get(b.key, { type: "json" }); if (u) out.push(u); }
   return out;
 }
-async function getState(store) { return (await store.get("state", { type: "json" })) || SEED; }
+async function getState(store) {
+  const s = (await store.get("state", { type: "json" })) || SEED;
+  if (!s.archive || typeof s.archive !== "object") s.archive = {};
+  return s;
+}
 async function setState(store, s) { await store.setJSON("state", s); }
 function publicUser(u) { return { id: u.id, email: u.email, name: u.name, role: u.role, createdAt: u.createdAt }; }
 
@@ -179,16 +174,18 @@ async function stateRoute(req, store, auth) {
     const incoming = {
       feed: Array.isArray(b.feed) ? b.feed : [],
       bank: b.bank && typeof b.bank === "object" ? b.bank : {},
-      passed: Array.isArray(b.passed) ? b.passed : []
+      passed: Array.isArray(b.passed) ? b.passed : [],
+      archive: b.archive && typeof b.archive === "object" ? b.archive : {}
     };
     // Non-destructive save: rescue any submissions that landed on the server
     // after this admin loaded — cards they haven't decided on yet (not in their
-    // feed/bank/passed). Prevents an admin's save from wiping a teammate's fresh
-    // submission under last-write-wins.
+    // feed/bank/passed/archive). Prevents an admin's save from wiping a
+    // teammate's fresh submission under last-write-wins.
     const known = new Set();
     incoming.feed.forEach((c) => c && known.add(c.id));
     incoming.passed.forEach((c) => c && known.add(c.id));
     Object.values(incoming.bank).forEach((a) => Array.isArray(a) && a.forEach((c) => c && known.add(c.id)));
+    Object.values(incoming.archive).forEach((a) => Array.isArray(a) && a.forEach((c) => c && known.add(c.id)));
     const current = await getState(store);
     const rescued = (current.feed || []).filter((c) => c && c.id && !known.has(c.id));
     if (rescued.length) incoming.feed = [...rescued, ...incoming.feed];
@@ -201,13 +198,14 @@ async function stateRoute(req, store, auth) {
 async function importRoute(req, store, auth) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (auth.role !== "admin" && auth.role !== "importer") return json({ error: "Not allowed" }, 403);
-  const { url, title } = await req.json().catch(() => ({}));
+  const { url, title, format } = await req.json().catch(() => ({}));
   if (!url || !/^https?:\/\//i.test(url)) return json({ error: "A valid link is required" }, 400);
+  if (!FORMATS.includes(format)) return json({ error: "Pick a format" }, 400);
   const resolved = await resolveUrl(url);
   const s = await getState(store);
   const card = {
     id: rid(), platform: detectPlatform(resolved), url: resolved,
-    originalUrl: resolved !== url ? url : undefined,
+    originalUrl: resolved !== url ? url : undefined, format,
     title: (title || "").trim() || "Imported reference",
     author: "", desc: "Submitted reference — open to preview.", img: "",
     submittedBy: auth.name || auth.email, submittedAt: Date.now()

@@ -166,8 +166,29 @@
   .act.like{background:linear-gradient(180deg,#153a26,#0e2519);border-color:rgba(55,214,122,.35)}.act.like svg{color:var(--green)}
   .act.rewind:hover{border-color:var(--amber);color:var(--amber-2)}.act.info:hover{border-color:var(--line-2)}
 
+  /* ---------- FORMAT PICKER ---------- */
+  .fmt-pick{display:flex;flex-wrap:wrap;gap:8px}
+  .fchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--ink-dim);font:600 12.5px/1 var(--font);padding:10px 13px;border-radius:100px;cursor:pointer;transition:.18s}
+  .fchip:hover{border-color:var(--line-2);color:var(--ink)}
+  .fchip.sel{background:var(--amber);border-color:transparent;color:#160a03}
+
   /* ---------- BANK ---------- */
   #view-bank{overflow-y:auto;padding:14px 20px 40px}
+  .seg2{display:flex;gap:6px;padding:6px;margin:0 0 16px;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:12px}
+  .seg2 button{flex:1;border:0;background:transparent;color:var(--ink-dim);font:600 12.5px/1 var(--font);padding:10px;border-radius:9px;cursor:pointer;transition:.2s}
+  .seg2 button.active{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.04));color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+  .folder{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel-2),var(--panel));border-radius:16px;margin-bottom:12px;overflow:hidden}
+  .folder .fhead{display:flex;align-items:center;gap:12px;padding:14px 15px;cursor:pointer}
+  .folder .fic{width:38px;height:38px;border-radius:11px;display:grid;place-items:center;font-size:18px;background:rgba(255,138,61,.14);border:1px solid rgba(255,138,61,.2);flex:none}
+  .folder .fmeta{flex:1;min-width:0}
+  .folder .fmeta .fn{font-size:14.5px;font-weight:700}
+  .folder .fmeta .fc{font:600 11px/1.3 var(--mono);color:var(--ink-faint);margin-top:3px}
+  .folder .fchev{color:var(--ink-faint);transition:transform .2s;flex:none;font-size:20px;line-height:1}
+  .folder.open .fchev{transform:rotate(90deg)}
+  .folder .fbody{display:none;padding:2px 14px 14px}
+  .folder.open .fbody{display:block}
+  .folder .fgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .empty-note{text-align:center;color:var(--ink-faint);padding:50px 20px;font-size:14px;line-height:1.6}
   .bank-head{display:flex;align-items:baseline;justify-content:space-between;margin:4px 0 14px}
   .bank-head h2{font-size:20px;font-weight:700}.bank-head span{font:600 12px/1 var(--mono);color:var(--ink-faint)}
   .fmt-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin:0 -20px;padding-left:20px;padding-right:20px;scrollbar-width:none}
@@ -341,6 +362,7 @@
         <div><label class="fl">Video link</label><input type="url" id="impUrl" placeholder="https://…" autocomplete="off" style="margin-top:9px"/></div>
         <div class="platform-hint"><div class="ph">TikTok</div><div class="ph">Reels</div><div class="ph">Shorts</div></div>
         <div><label class="fl">Title <span style="color:var(--ink-faint)">— optional</span></label><input type="text" id="impTitle" placeholder="What's the concept?" autocomplete="off" style="margin-top:9px"/></div>
+        <div><label class="fl">Format</label><div class="fmt-pick" id="impFormats"></div></div>
         <button class="btn primary" id="impSubmit">Submit reference</button>
       </div>
     </div>
@@ -352,9 +374,12 @@
 
   <!-- BANK (all) -->
   <section class="view" id="view-bank" hidden>
-    <div class="bank-head"><h2>Video Bank</h2><span id="bankTotal">0 saved</span></div>
-    <div class="fmt-scroll" id="fmtScroll"></div>
-    <div class="grid" id="bankGrid"></div>
+    <div class="bank-head"><h2 id="bankHeading">Approved</h2><span id="bankTotal">0 videos</span></div>
+    <div class="seg2" id="bankMode">
+      <button class="active" data-mode="approved">Approved</button>
+      <button data-mode="archive">Archive</button>
+    </div>
+    <div id="folders"></div>
   </section>
 
   <!-- TEAM (admin) -->
@@ -400,6 +425,8 @@
   <div class="platform-hint" style="margin-top:12px"><div class="ph">TikTok</div><div class="ph">Reels</div><div class="ph">Shorts</div></div>
   <label class="fl" style="margin-top:16px">Title <span style="color:var(--ink-faint)">— optional</span></label>
   <input type="text" id="addTitle" placeholder="What's the concept?" autocomplete="off" style="margin-top:9px"/>
+  <label class="fl" style="margin-top:16px">Format</label>
+  <div class="fmt-pick" id="addFormats" style="margin-top:9px"></div>
   <div class="btn-row"><button class="btn ghost auto" id="addCancel">Cancel</button><button class="btn primary" id="addConfirm">Add to feed</button></div>
 </div>
 
@@ -490,10 +517,11 @@
  *  Sift — auth + roles + shared database
  * ============================================================= */
 const FORMATS = [
-  {name:"Transformations",icon:"💪",note:"Before / after"},{name:"UGC",icon:"📱",note:"Creator-style"},
-  {name:"UGC shoots",icon:"🎬",note:"Produced UGC"},{name:"Cinematic",icon:"🎞️",note:"High production"},
-  {name:"IRL",icon:"🌆",note:"In real life"},{name:"Yaps",icon:"🎙️",note:"Talking to cam"},
-  {name:"Routine",icon:"⏱️",note:"Day in the life"},{name:"Street interviews",icon:"🎤",note:"Man on the street"},
+  {name:"Hair transformations",icon:"💇",note:"Before / after"},
+  {name:"High-effort UGC",icon:"🎬",note:"Produced, high production"},
+  {name:"IRL",icon:"🌆",note:"In real life"},
+  {name:"UGC shoots",icon:"📸",note:"Shoot content"},
+  {name:"Yaps",icon:"🎙️",note:"Talking to cam"},
 ];
 const REASONS = ["Off-brand","Overdone","Low quality","Wrong format","Not our vibe","Already have it"];
 const PLAT = {tiktok:{label:"TikTok",color:"#25f4ee",glyph:"🎵"},reels:{label:"Reels",color:"#ff2d78",glyph:"📸"},shorts:{label:"Shorts",color:"#ff2b2b",glyph:"▶️"}};
@@ -517,8 +545,8 @@ function isAdmin(){ return role()==="admin"; }
 function canImport(){ return role()==="admin"||role()==="importer"; }
 
 /* ---------- state ---------- */
-const store = { feed:[], bank:{}, passed:[], history:[] };
-function snapshot(){ return {feed:store.feed,bank:store.bank,passed:store.passed}; }
+const store = { feed:[], bank:{}, passed:[], archive:{}, history:[] };
+function snapshot(){ return {feed:store.feed,bank:store.bank,passed:store.passed,archive:store.archive}; }
 function sid(){ return Math.random().toString(36).slice(2,9); }
 
 let saveTimer=null,saving=false,dirty=false;
@@ -537,13 +565,13 @@ async function pushState(){
 }
 async function loadState(){
   setSync("syncing");
-  try{ const r=await api("/api/state"); if(!r.ok)throw new Error(); const s=await r.json(); store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[]; setSync("saved"); }
+  try{ const r=await api("/api/state"); if(!r.ok)throw new Error(); const s=await r.json(); store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[]; store.archive=s.archive||{}; setSync("saved"); }
   catch(e){ setSync("offline"); }
 }
 async function maybeRefresh(){
   if(dirty||saving||dragState||document.querySelector(".sheet.open")||document.querySelector(".card.playing")||document.getElementById("lightbox").classList.contains("open"))return;
   try{ const r=await api("/api/state"); if(!r.ok)return; const s=await r.json();
-    store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[];
+    store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[]; store.archive=s.archive||{};
     if(!hidden("view-swipe"))renderDeck(); if(!hidden("view-bank"))renderBankTabs(); updateCounts(); setSync("saved");
   }catch(e){}
 }
@@ -557,6 +585,7 @@ function hidden(id){ return document.getElementById(id).hidden; }
  * ============================================================= */
 async function boot(){
   buildFormatGrid(); buildReasons();
+  buildFormatPicker("impFormats", n=>impFormat=n); buildFormatPicker("addFormats", n=>addFormat=n);
   // invite redemption link: #invite=<token> or ?invite=<token>
   const inviteToken = getInviteToken();
   if(inviteToken){ return showInvite(inviteToken); }
@@ -685,7 +714,7 @@ function renderDeck(){
     const isTop=idx===items.length-1, depth=items.length-1-idx;
     const el=document.createElement("div"); el.className="card"; el.dataset.id=card.id;
     const p=PLAT[card.platform]||PLAT.tiktok;
-    const sub = card.submittedBy?`<span class="chip">from ${esc(card.submittedBy)}</span>`:`<span class="chip">Swipe → keep</span>`;
+    const sub = (`${card.format?`<span class="chip">${esc(card.format)}</span>`:""}${card.submittedBy?`<span class="chip">from ${esc(card.submittedBy)}</span>`:""}`) || `<span class="chip">Swipe → keep</span>`;
     const canPlay = isTop && !!card.url;
     el.innerHTML=`
       <div class="media">${card.img?`<img src="${esc(card.img)}" alt="">`:`<div class="fallback"><div class="glyph">${p.glyph}</div></div>`}</div>
@@ -730,7 +759,7 @@ function programSwipe(dir){
   setTimeout(()=>{ dir>0?onKeep(card):onPass(card); },230);
 }
 let pendingKeep=null,pendingPass=null;
-function onKeep(card){ store.feed=store.feed.filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); openSheet("sheetFormat"); }
+function onKeep(card){ store.feed=store.feed.filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
 function commitKeep(format){ const card=pendingKeep; if(!card)return; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,savedAt:Date.now()}); store.history.push({type:"keep",card,format}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); }
 function onPass(card){ store.feed=store.feed.filter(c=>c.id!==card.id); pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); openSheet("sheetPass"); }
 function commitPass(withNote){ const card=pendingPass; if(!card)return; const note=withNote?(selectedReason||document.getElementById("passNote").value.trim()||""):""; store.passed.unshift({...card,reason:note,passedAt:Date.now()}); store.history.push({type:"pass",card}); pendingPass=null; save(); closeSheets(); toast(note?`Passed — “${note}”`:"Passed","red"); updateCounts(); }
@@ -739,31 +768,58 @@ function undo(){ const last=store.history.pop(); if(!last){toast("Nothing to und
 /* ============================================================= *
  *  BANK
  * ============================================================= */
-let bankFilter="__all";
+let bankMode="approved";
+document.querySelectorAll("#bankMode button").forEach(b=>b.onclick=()=>{ bankMode=b.dataset.mode; document.querySelectorAll("#bankMode button").forEach(x=>x.classList.toggle("active",x===b)); renderBankTabs(); });
+
 function renderBankTabs(){
-  const banked=store.bank; const total=Object.values(banked).reduce((a,b)=>a+b.length,0);
-  const bt=document.getElementById("bankTotal"); if(bt)bt.textContent=`${total} saved`;
-  const scroll=document.getElementById("fmtScroll"); scroll.innerHTML="";
-  scroll.appendChild(chip("All",total,bankFilter==="__all",()=>{bankFilter="__all";renderBankTabs();}));
-  FORMATS.forEach(f=>{ const n=(banked[f.name]||[]).length; if(n)scroll.appendChild(chip(f.name,n,bankFilter===f.name,()=>{bankFilter=f.name;renderBankTabs();})); });
-  Object.keys(banked).filter(c=>banked[c].length&&!FORMATS.some(f=>f.name===c)).forEach(c=>scroll.appendChild(chip(c,banked[c].length,bankFilter===c,()=>{bankFilter=c;renderBankTabs();})));
-  renderBankGrid(); updateCounts();
-  function chip(label,n,active,cb){ const b=document.createElement("button"); b.className="fmt"+(active?" active":""); b.innerHTML=`${esc(label)} <span class="n">${n}</span>`; b.onclick=cb; return b; }
-}
-function renderBankGrid(){
-  const grid=document.getElementById("bankGrid"); let cards=[];
-  if(bankFilter==="__all"){ Object.values(store.bank).forEach(a=>cards.push(...a)); cards.sort((a,b)=>b.savedAt-a.savedAt); } else cards=store.bank[bankFilter]||[];
-  if(!cards.length){ grid.innerHTML=`<div class="bank-empty">Nothing here yet.${isAdmin()?"<br>Swipe right on references to fill the bank.":"<br>Approved references show up here."}</div>`; return; }
-  grid.innerHTML="";
-  cards.forEach(c=>{
-    const p=PLAT[c.platform]||PLAT.tiktok; const el=document.createElement("div"); el.className="bcard";
-    el.innerHTML=`<div class="media">${c.img?`<img src="${esc(c.img)}">`:`<div class="fallback"><span>${p.glyph}</span></div>`}</div><div class="sc"></div><span class="plat" style="background:${p.color}"></span>${c.url?`<div class="bplay">${PLAY_SVG}</div>`:""}${isAdmin()?'<div class="del" title="Remove">✕</div>':''}<div class="lbl"><div class="t">${esc(c.title)}</div><div class="p">${esc(c.format||"")}</div></div>`;
-    if(isAdmin()){ const d=el.querySelector(".del"); if(d)d.onclick=(e)=>{e.stopPropagation();removeFromBank(c);}; }
-    el.onclick=()=>{ if(c.url)openLightbox(c); else toast("No link on this one","amber"); };
-    grid.appendChild(el);
+  const source = bankMode==="approved" ? store.bank : store.archive;
+  document.getElementById("bankHeading").textContent = bankMode==="approved" ? "Approved" : "Archive";
+  const total = Object.values(source).reduce((a,b)=>a+(b?b.length:0),0);
+  document.getElementById("bankTotal").textContent = `${total} video${total===1?"":"s"}`;
+  updateCounts();
+  const wrap=document.getElementById("folders"); wrap.innerHTML="";
+  const known = FORMATS.filter(f=>(source[f.name]||[]).length);
+  const extra = Object.keys(source).filter(k=>(source[k]||[]).length && !FORMATS.some(f=>f.name===k)).map(k=>({name:k,icon:"📁"}));
+  const cats=[...known,...extra];
+  if(!cats.length){ wrap.innerHTML=`<div class="empty-note">${bankMode==="approved"?(isAdmin()?"No approved videos yet.<br>Swipe right in Discover to fill these folders.":"No approved videos yet."):"Nothing archived yet.<br>Copy an approved folder to move it here."}</div>`; return; }
+  cats.forEach(f=>{
+    const cards=source[f.name]||[]; const folder=document.createElement("div"); folder.className="folder";
+    const copyBtn = (bankMode==="approved" && isAdmin()) ? `<button class="btn primary sm fcopy">Copy ${cards.length}</button>` : "";
+    folder.innerHTML=`<div class="fhead"><div class="fic">${f.icon||"📁"}</div><div class="fmeta"><div class="fn">${esc(f.name)}</div><div class="fc">${cards.length} video${cards.length===1?"":"s"}${bankMode==="archive"?" · copied":""}</div></div>${copyBtn}<div class="fchev">›</div></div><div class="fbody"><div class="fgrid"></div></div>`;
+    const grid=folder.querySelector(".fgrid");
+    cards.forEach(c=>grid.appendChild(bankCard(c)));
+    folder.querySelector(".fhead").onclick=(e)=>{ if(e.target.closest(".fcopy"))return; folder.classList.toggle("open"); };
+    const cb=folder.querySelector(".fcopy"); if(cb) cb.onclick=(e)=>{ e.stopPropagation(); copyFolder(f.name); };
+    wrap.appendChild(folder);
   });
 }
-function removeFromBank(card){ Object.keys(store.bank).forEach(k=>{ store.bank[k]=store.bank[k].filter(c=>c.id!==card.id); if(!store.bank[k].length)delete store.bank[k]; }); save(); renderBankTabs(); toast("Removed from bank","red"); }
+function bankCard(c){
+  const p=PLAT[c.platform]||PLAT.tiktok; const el=document.createElement("div"); el.className="bcard";
+  const canRemove = bankMode==="approved" && isAdmin();
+  el.innerHTML=`<div class="media">${c.img?`<img src="${esc(c.img)}">`:`<div class="fallback"><span>${p.glyph}</span></div>`}</div><div class="sc"></div><span class="plat" style="background:${p.color}"></span>${c.url?`<div class="bplay">${PLAY_SVG}</div>`:""}${canRemove?'<div class="del" title="Remove">✕</div>':''}<div class="lbl"><div class="t">${esc(c.title)}</div><div class="p">${esc(c.submittedBy?("by "+c.submittedBy):"")}</div></div>`;
+  const del=el.querySelector(".del"); if(del)del.onclick=(e)=>{e.stopPropagation();removeFromBank(c);};
+  el.onclick=()=>{ if(c.url)openLightbox(c); else toast("No link on this one","amber"); };
+  return el;
+}
+async function copyFolder(format){
+  const cards=(store.bank[format]||[]).slice(); if(!cards.length)return;
+  if(!confirm(`Copy ${cards.length} ${format} link${cards.length===1?"":"s"} and move them to Archive?`))return;
+  const links=cards.map(c=>c.url).filter(Boolean).join("\n");
+  let copied=false; try{ await navigator.clipboard.writeText(links); copied=true; }catch(e){}
+  store.archive[format]=[...(store.archive[format]||[]), ...cards.map(c=>({...c,copiedAt:Date.now()}))];
+  delete store.bank[format];
+  save(); renderBankTabs();
+  if(copied) toast(`Copied ${cards.length} link${cards.length===1?"":"s"} → moved to Archive`,"green");
+  else showShare("Copy these links", `${cards.length} link${cards.length===1?"":"s"} — paste into your doc. Moved to Archive.`, links);
+}
+function removeFromBank(card){ Object.keys(store.bank).forEach(k=>{ store.bank[k]=store.bank[k].filter(c=>c.id!==card.id); if(!store.bank[k].length)delete store.bank[k]; }); save(); renderBankTabs(); toast("Removed from approved","red"); }
+
+/* format pickers (import + admin quick-add) */
+let impFormat=null, addFormat=null;
+function buildFormatPicker(containerId, onPick){
+  const c=document.getElementById(containerId); if(!c)return; c.innerHTML="";
+  FORMATS.forEach(f=>{ const b=document.createElement("button"); b.type="button"; b.className="fchip"; b.dataset.name=f.name; b.innerHTML=`<span>${f.icon}</span> ${esc(f.name)}`; b.onclick=()=>{ c.querySelectorAll(".fchip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); onPick(f.name); }; c.appendChild(b); });
+}
 
 /* ============================================================= *
  *  IMPORT (importer + admin)
@@ -777,13 +833,15 @@ async function submitImport(){
   const title=document.getElementById("impTitle").value.trim();
   const err=document.getElementById("importErr"); err.classList.remove("show");
   if(!/^https?:\/\//i.test(url)){ err.textContent="Paste a full link starting with http."; err.classList.add("show"); return; }
+  if(!impFormat){ err.textContent="Pick a format for this reference."; err.classList.add("show"); return; }
   const btn=document.getElementById("impSubmit"); btn.disabled=true; btn.textContent="Submitting…";
   try{
-    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title})});
+    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:impFormat})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
     sessionSubs.unshift(d.card);
     if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card); updateCounts();
     document.getElementById("impUrl").value=""; document.getElementById("impTitle").value="";
+    impFormat=null; document.querySelectorAll("#impFormats .fchip").forEach(x=>x.classList.remove("sel"));
     renderRecent(); toast(isAdmin()?"Submitted — it's in Discover":"Reference submitted for review","green");
   }catch(ex){ err.textContent=ex.message||"Couldn't submit"; err.classList.add("show"); }
   finally{ btn.disabled=false; btn.textContent="Submit reference"; }
@@ -960,13 +1018,14 @@ function genPass(){ const all="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2
 /* ============================================================= *
  *  ADD sheet (admin quick-add)
  * ============================================================= */
-function openAdd(){ document.getElementById("addUrl").value=""; document.getElementById("addTitle").value=""; openSheet("sheetAdd"); setTimeout(()=>document.getElementById("addUrl").focus(),300); }
+function openAdd(){ document.getElementById("addUrl").value=""; document.getElementById("addTitle").value=""; addFormat=null; document.querySelectorAll("#addFormats .fchip").forEach(x=>x.classList.remove("sel")); openSheet("sheetAdd"); setTimeout(()=>document.getElementById("addUrl").focus(),300); }
 async function commitAdd(){
   const url=document.getElementById("addUrl").value.trim(); const title=document.getElementById("addTitle").value.trim();
   if(!/^https?:\/\//i.test(url)){ toast("Paste a valid link","amber"); return; }
+  if(!addFormat){ toast("Pick a format","amber"); return; }
   const btn=document.getElementById("addConfirm"); btn.disabled=true; btn.textContent="Adding…";
   try{
-    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title})}); // resolves short links server-side
+    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:addFormat})}); // resolves short links server-side
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
     if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card);
     closeSheets(); switchView("swipe"); renderDeck(); toast(`Added a ${PLAT[d.card.platform].label} reference`,"green");
