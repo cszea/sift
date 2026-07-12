@@ -30,3 +30,5 @@ netlify deploy --build --prod
 - `POST /api/state` with the same JSON body → persists it
 
 The whole app state is stored as a single JSON blob under the key `state` in the `reelbank` store. For a 2-reviewer internal tool this is plenty; if you ever need conflict-free concurrent editing, split it into per-item operations.
+
+<!-- auto-deploy verified via GitHub → Netlify -->
