@@ -7,7 +7,7 @@
   </radialGradient>
 </defs>
   <rect width="512" height="512" rx="118" fill="url(#bg)"/><rect width="512" height="512" rx="118" fill="url(#glow)"/>
-  <path d="M340 176 C300 150 196 150 186 208 C178 256 300 250 326 300 C352 352 236 372 176 336"
-    fill="none" stroke="#fff" stroke-width="44" stroke-linecap="round" stroke-linejoin="round"/>
-  <circle cx="356" cy="182" r="17" fill="#37d67a"/>
-  <circle cx="160" cy="330" r="17" fill="#ff4d5e"/></svg>
+  <rect x="132" y="180" width="248" height="32" rx="16" fill="#fff"/>
+  <rect x="168" y="244" width="176" height="32" rx="16" fill="#fff" opacity=".92"/>
+  <rect x="204" y="308" width="104" height="32" rx="16" fill="#fff" opacity=".82"/>
+  <path d="M256 360 L288 392 L256 424 L224 392 Z" fill="#fff"/></svg>
