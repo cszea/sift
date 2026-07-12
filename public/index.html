@@ -49,6 +49,8 @@
   .gate .err{background:rgba(255,77,94,.12);border:1px solid rgba(255,77,94,.35);color:#ffb3bb;font-size:12.5px;padding:11px 14px;border-radius:12px;display:none}
   .gate .err.show{display:block}
   .gate .hint{text-align:center;color:var(--ink-faint);font-size:11.5px;margin-top:18px;line-height:1.6}
+  .stay{display:flex;align-items:center;gap:9px;color:var(--ink-dim);font-size:13px;cursor:pointer;user-select:none;margin:-2px 2px 2px}
+  .stay input{width:17px;height:17px;accent-color:var(--amber);cursor:pointer;flex:none;margin:0}
   .link{color:var(--amber-2);cursor:pointer;font-weight:600;text-decoration:none}
   .link:hover{text-decoration:underline}
   .okbox{display:none;background:rgba(55,214,122,.1);border:1px solid rgba(55,214,122,.35);color:#9ff0c0;font-size:12.5px;line-height:1.5;padding:12px 14px;border-radius:12px}
@@ -270,6 +272,7 @@
         <div class="err" id="loginErr"></div>
         <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required />
         <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" required />
+        <label class="stay"><input type="checkbox" id="loginStay" checked /><span>Stay signed in on this device</span></label>
         <button class="btn primary" type="submit" id="loginBtn">Sign in</button>
       </form>
       <p class="hint">Need access? <a class="link" id="toRequest">Request an invite →</a></p>
@@ -496,7 +499,11 @@ const REASONS = ["Off-brand","Overdone","Low quality","Wrong format","Not our vi
 const PLAT = {tiktok:{label:"TikTok",color:"#25f4ee",glyph:"🎵"},reels:{label:"Reels",color:"#ff2d78",glyph:"📸"},shorts:{label:"Shorts",color:"#ff2b2b",glyph:"▶️"}};
 
 /* ---------- auth ---------- */
-let AUTH = { token: localStorage.getItem("reel.token")||null, user:null };
+const TOKEN_KEY="reel.token";
+function loadToken(){ try{ return localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY) || null; }catch(e){ return null; } }
+function saveToken(t,persist){ try{ if(persist){ localStorage.setItem(TOKEN_KEY,t); sessionStorage.removeItem(TOKEN_KEY); } else { sessionStorage.setItem(TOKEN_KEY,t); localStorage.removeItem(TOKEN_KEY); } }catch(e){} }
+function clearToken(){ try{ localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem(TOKEN_KEY); }catch(e){} }
+let AUTH = { token: loadToken(), user:null };
 function authHeaders(extra){ return Object.assign({}, extra||{}, AUTH.token?{authorization:"Bearer "+AUTH.token}:{}); }
 async function api(path, opts){
   opts = opts||{};
@@ -607,7 +614,7 @@ document.getElementById("inviteForm").addEventListener("submit",async(e)=>{
   try{
     const r=await fetch("/api/invite-accept",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:window._inviteToken,password,name})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Couldn't create account");
-    AUTH.token=d.token; AUTH.user=d.user; localStorage.setItem("reel.token",d.token);
+    AUTH.token=d.token; AUTH.user=d.user; saveToken(d.token, true);
     history.replaceState(null,"",location.pathname); // strip invite token from URL
     enterApp();
   }catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
@@ -632,12 +639,12 @@ document.getElementById("loginForm").addEventListener("submit", async (e)=>{
   try{
     const r=await fetch("/api/login",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,password})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Sign in failed");
-    AUTH.token=d.token; AUTH.user=d.user; localStorage.setItem("reel.token",d.token);
+    AUTH.token=d.token; AUTH.user=d.user; saveToken(d.token, document.getElementById("loginStay").checked);
     document.getElementById("loginPass").value=""; enterApp();
   }catch(ex){ err.textContent=ex.message||"Sign in failed"; err.classList.add("show"); }
   finally{ btn.disabled=false; btn.textContent="Sign in"; }
 });
-function logout(expired){ AUTH.token=null; AUTH.user=null; localStorage.removeItem("reel.token"); showLogin(); if(expired) toast("Session expired — sign in again","amber"); }
+function logout(expired){ AUTH.token=null; AUTH.user=null; clearToken(); showLogin(); if(expired) toast("Session expired — sign in again","amber"); }
 document.getElementById("avatar").addEventListener("click",()=>{ if(confirm("Sign out?")) logout(); });
 
 /* ============================================================= *
