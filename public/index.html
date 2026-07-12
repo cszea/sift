@@ -114,7 +114,12 @@
 
   /* ---------- SWIPE ---------- */
   #view-swipe{display:flex;flex-direction:column}
-  .stage{flex:1;position:relative;padding:16px 20px 4px}
+  .ap-row{display:flex;justify-content:center;padding:6px 0 0}
+  .ap-toggle{display:inline-flex;align-items:center;gap:8px;font:600 11.5px/1 var(--font);color:var(--ink-dim);background:rgba(255,255,255,.04);border:1px solid var(--line);padding:8px 14px;border-radius:100px;cursor:pointer;transition:.2s}
+  .ap-toggle .apd{width:7px;height:7px;border-radius:50%;background:var(--ink-faint);transition:.2s}
+  .ap-toggle.on{color:var(--ink)}
+  .ap-toggle.on .apd{background:var(--green);box-shadow:0 0 8px var(--green-glow)}
+  .stage{flex:1;position:relative;padding:12px 20px 4px}
   .deck{position:absolute;inset:16px 20px 4px}
   .card{position:absolute;inset:0;border-radius:var(--radius);overflow:hidden;background:var(--panel);border:1px solid var(--line-2);box-shadow:var(--shadow);will-change:transform;cursor:grab;user-select:none;transform-origin:center 120%}
   .card:active{cursor:grabbing}
@@ -134,7 +139,7 @@
   .card .info p{font-size:13.5px;line-height:1.5;color:var(--ink-dim);max-width:92%}
   .card .info .sub{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
   .chip{font:600 11px/1 var(--font);color:var(--ink-dim);background:rgba(255,255,255,.05);border:1px solid var(--line);padding:7px 10px;border-radius:8px}
-  .stamp{position:absolute;top:32px;padding:8px 16px;border-radius:12px;font:800 22px/1 var(--font);letter-spacing:.08em;opacity:0;transform:scale(.8)}
+  .stamp{position:absolute;top:32px;z-index:6;padding:8px 16px;border-radius:12px;font:800 22px/1 var(--font);letter-spacing:.08em;opacity:0;transform:scale(.8)}
   .stamp.like{left:24px;color:var(--green);border:3px solid var(--green);rotate:-16deg;text-shadow:0 0 30px var(--green-glow)}
   .stamp.nope{right:24px;color:var(--red);border:3px solid var(--red);rotate:16deg;text-shadow:0 0 30px var(--red-glow)}
   .card .tint{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .08s}
@@ -343,6 +348,7 @@
 
   <!-- SWIPE (admin) -->
   <section class="view" id="view-swipe" hidden>
+    <div class="ap-row"><button class="ap-toggle on" id="apToggle" type="button"><span class="apd"></span>Autoplay</button></div>
     <div class="stage"><div class="deck" id="deck"></div></div>
     <div class="actions">
       <button class="act small rewind" id="btnRewind" title="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4-4M3 8l4 4M3 8h11a7 7 0 0 1 0 14H8"/></svg></button>
@@ -703,6 +709,12 @@ function switchView(v){
  * ============================================================= */
 const deck=document.getElementById("deck");
 let dragState=null;
+let autoplay=(localStorage.getItem("sift.autoplay")??"1")==="1";
+let collapsedCardId=null;
+const apToggle=document.getElementById("apToggle");
+function paintAutoplay(){ apToggle.classList.toggle("on",autoplay); }
+apToggle.onclick=()=>{ autoplay=!autoplay; localStorage.setItem("sift.autoplay",autoplay?"1":"0"); paintAutoplay(); collapsedCardId=null; renderDeck(); };
+paintAutoplay();
 function renderDeck(){
   deck.innerHTML="";
   const items=store.feed.slice(0,3).reverse();
@@ -725,10 +737,12 @@ function renderDeck(){
       <div class="info"><div class="kicker">Reference</div><h2>${esc(card.title)}</h2><p>${esc(card.desc||"Tap ▶ to play, or ↗ to open.")}</p><div class="sub">${sub}<span class="chip">← pass</span></div></div>`;
     el.style.transform=`translateY(${depth*14}px) scale(${1-depth*0.05})`;
     el.style.opacity=depth>1?0:1; el.style.zIndex=10-depth;
-    if(canPlay){ const pb=el.querySelector(".playbtn"); pb.onclick=(e)=>{ e.stopPropagation(); playInCard(el,card); }; pb.addEventListener("pointerdown",e=>e.stopPropagation()); }
+    if(canPlay){ const pb=el.querySelector(".playbtn"); pb.onclick=(e)=>{ e.stopPropagation(); collapsedCardId=null; playInCard(el,card); }; pb.addEventListener("pointerdown",e=>e.stopPropagation()); }
     if(isTop) attachDrag(el,card);
     deck.appendChild(el);
   });
+  // auto-load the top card's video (feed-style) unless it was collapsed
+  if(autoplay){ const top=store.feed[0]; const el=deck.querySelector(".card:last-child"); if(top && el && embedFor(top.url) && collapsedCardId!==top.id && !el.classList.contains("playing")) playInCard(el,top); }
   updateCounts();
 }
 function attachDrag(el,card){
@@ -759,9 +773,9 @@ function programSwipe(dir){
   setTimeout(()=>{ dir>0?onKeep(card):onPass(card); },230);
 }
 let pendingKeep=null,pendingPass=null;
-function onKeep(card){ store.feed=store.feed.filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
+function onKeep(card){ collapsedCardId=null; store.feed=store.feed.filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
 function commitKeep(format){ const card=pendingKeep; if(!card)return; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,savedAt:Date.now()}); store.history.push({type:"keep",card,format}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); }
-function onPass(card){ store.feed=store.feed.filter(c=>c.id!==card.id); pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); openSheet("sheetPass"); }
+function onPass(card){ collapsedCardId=null; store.feed=store.feed.filter(c=>c.id!==card.id); pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); openSheet("sheetPass"); }
 function commitPass(withNote){ const card=pendingPass; if(!card)return; const note=withNote?(selectedReason||document.getElementById("passNote").value.trim()||""):""; store.passed.unshift({...card,reason:note,passedAt:Date.now()}); store.history.push({type:"pass",card}); pendingPass=null; save(); closeSheets(); toast(note?`Passed — “${note}”`:"Passed","red"); updateCounts(); }
 function undo(){ const last=store.history.pop(); if(!last){toast("Nothing to undo","amber");return;} if(last.type==="keep"){ store.bank[last.format]=(store.bank[last.format]||[]).filter(c=>c.id!==last.card.id); if(store.bank[last.format]&&!store.bank[last.format].length)delete store.bank[last.format]; } else { store.passed=store.passed.filter(c=>c.id!==last.card.id); } store.feed.unshift(last.card); save(); renderDeck(); closeSheets(); toast("Brought it back","amber"); }
 
@@ -1072,7 +1086,7 @@ function playInCard(el,card){
   media.innerHTML=`<iframe class="embed-frame" src="${esc(emb.src)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
   el.classList.add("playing");
   const close=document.createElement("div"); close.className="embed-close"; close.textContent="✕";
-  close.onclick=(e)=>{ e.stopPropagation(); renderDeck(); };
+  close.onclick=(e)=>{ e.stopPropagation(); collapsedCardId=card.id; renderDeck(); };
   el.appendChild(close);
 }
 /* bank lightbox */
