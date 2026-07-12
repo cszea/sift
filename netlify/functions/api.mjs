@@ -217,10 +217,10 @@ async function usersRoute(req, store, auth) {
       : (await listUsers(store)).find((u) => u.id === b.id);
 
     if (b.action === "delete") {
-      const t = await target();
-      if (t) {
-        if (t.email === auth.email) return json({ error: "You can't delete your own account" }, 400);
-        await deleteUser(store, t.email);
+      const email = b.email ? String(b.email).toLowerCase().trim() : (await target())?.email;
+      if (email) {
+        if (email === auth.email) return json({ error: "You can't delete your own account" }, 400);
+        await deleteUser(store, email); // delete by key directly — no dependency on a prior read
       }
       return json({ ok: true });
     }
