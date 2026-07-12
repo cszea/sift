@@ -129,7 +129,19 @@ function requireAuth(req) {
 async function login(req, store) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   const { email, password } = await req.json().catch(() => ({}));
-  const u = await getUser(store, email || "");
+  let u = await getUser(store, email || "");
+  // Cold-start fallback: if the admin seed blob hasn't materialized yet but the
+  // credentials match the admin env seed, authenticate and persist on the spot.
+  if (!u) {
+    const adminEmail = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
+    if (adminEmail && String(email || "").toLowerCase().trim() === adminEmail &&
+        process.env.ADMIN_SALT && process.env.ADMIN_HASH &&
+        verifyPassword(password || "", process.env.ADMIN_SALT, process.env.ADMIN_HASH)) {
+      u = { id: rid(), email: adminEmail, name: process.env.ADMIN_NAME || "Admin", role: "admin",
+            salt: process.env.ADMIN_SALT, hash: process.env.ADMIN_HASH, createdAt: Date.now() };
+      await putUser(store, u);
+    }
+  }
   if (!u || !verifyPassword(password || "", u.salt, u.hash))
     return json({ error: "Invalid email or password" }, 401);
   const token = sign({ sub: u.id, email: u.email, name: u.name, role: u.role, iat: Date.now(), exp: Date.now() + 30 * DAY });
