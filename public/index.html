@@ -41,6 +41,24 @@
   .gate .err{background:rgba(255,77,94,.12);border:1px solid rgba(255,77,94,.35);color:#ffb3bb;font-size:12.5px;padding:11px 14px;border-radius:12px;display:none}
   .gate .err.show{display:block}
   .gate .hint{text-align:center;color:var(--ink-faint);font-size:11.5px;margin-top:18px;line-height:1.6}
+  .link{color:var(--amber-2);cursor:pointer;font-weight:600;text-decoration:none}
+  .link:hover{text-decoration:underline}
+  .okbox{display:none;background:rgba(55,214,122,.1);border:1px solid rgba(55,214,122,.35);color:#9ff0c0;font-size:12.5px;line-height:1.5;padding:12px 14px;border-radius:12px}
+  .okbox.show{display:block}
+  /* team: requests + share */
+  .reqcard{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid rgba(255,138,61,.28);border-radius:16px;padding:14px;margin-bottom:10px}
+  .reqcard .rtop{display:flex;align-items:flex-start;gap:11px}
+  .reqcard .rav{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#160a03;background:linear-gradient(150deg,var(--amber-2),#ff7a34);flex:none}
+  .reqcard .rmeta{flex:1;min-width:0}
+  .reqcard .rmeta .rn{font-size:13.5px;font-weight:700}
+  .reqcard .rmeta .re{font:500 11px/1.4 var(--mono);color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .reqcard .rnote{font-size:12px;color:var(--ink-dim);margin-top:9px;line-height:1.45;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:10px;padding:9px 11px}
+  .reqcard .racts{display:flex;gap:8px;margin-top:12px}
+  .section-label{font:700 10.5px/1 var(--mono);letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin:4px 2px 12px;display:flex;align-items:center;gap:8px}
+  .section-label .cnt{background:var(--amber);color:#160a03;border-radius:20px;padding:2px 7px;font-size:9px}
+  .sharebox{display:flex;gap:8px;align-items:center;background:rgba(0,0,0,.35);border:1px solid var(--line-2);border-radius:12px;padding:4px 4px 4px 14px;margin-top:6px}
+  .sharebox input{border:0;background:transparent;padding:11px 0;font:600 12.5px/1 var(--mono);color:var(--amber-2)}
+  .sharebox input:focus{box-shadow:none}
 
   input,textarea,select{width:100%;background:rgba(0,0,0,.35);border:1px solid var(--line-2);border-radius:14px;color:var(--ink);font:500 14.5px/1.5 var(--font);padding:15px 16px;resize:none;outline:none;transition:.2s}
   input:focus,textarea:focus,select:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,138,61,.14)}
@@ -235,15 +253,47 @@
 <div class="gate" id="gate">
   <div class="gate-card">
     <div class="logo"><div class="mark">R</div><div class="name">REEL<b>·</b>bank</div></div>
-    <h1>Sign in</h1>
-    <p class="sub">Private reference library. You need an account from an admin to get in.</p>
-    <form id="loginForm">
-      <div class="err" id="loginErr"></div>
-      <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required />
-      <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" required />
-      <button class="btn primary" type="submit" id="loginBtn">Sign in</button>
-    </form>
-    <p class="hint">Need access? Ask an admin to create your login.</p>
+
+    <!-- sign in -->
+    <div id="paneSignin">
+      <h1>Sign in</h1>
+      <p class="sub">Private reference library. You need an approved account to get in.</p>
+      <form id="loginForm">
+        <div class="err" id="loginErr"></div>
+        <input type="email" id="loginEmail" placeholder="Email" autocomplete="username" required />
+        <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" required />
+        <button class="btn primary" type="submit" id="loginBtn">Sign in</button>
+      </form>
+      <p class="hint">Need access? <a class="link" id="toRequest">Request an invite →</a></p>
+    </div>
+
+    <!-- request access -->
+    <div id="paneRequest" hidden>
+      <h1>Request access</h1>
+      <p class="sub">Drop your email and an admin will approve you and send an invite.</p>
+      <form id="requestForm">
+        <div class="err" id="reqErr"></div>
+        <div class="okbox" id="reqOk">Request sent ✓ — an admin will review it and send you an invite link. You can close this tab.</div>
+        <input type="email" id="reqEmail" placeholder="Your email" autocomplete="email" required />
+        <input type="text" id="reqName" placeholder="Your name (optional)" autocomplete="name" />
+        <textarea id="reqNote" rows="2" placeholder="Anything to tell the admin? (optional)"></textarea>
+        <button class="btn primary" type="submit" id="reqBtn">Send request</button>
+      </form>
+      <p class="hint"><a class="link" id="toSignin">← Back to sign in</a></p>
+    </div>
+
+    <!-- invite redeem -->
+    <div id="paneInvite" hidden>
+      <h1>You're invited 🎉</h1>
+      <p class="sub" id="invSub">Set a password to finish creating your account.</p>
+      <form id="inviteForm">
+        <div class="err" id="invErr"></div>
+        <input type="email" id="invEmail" readonly style="opacity:.7" />
+        <input type="text" id="invName" placeholder="Your name (optional)" autocomplete="name" />
+        <input type="password" id="invPass" placeholder="Choose a password (6+ characters)" autocomplete="new-password" required />
+        <button class="btn primary" type="submit" id="invBtn">Create account & sign in</button>
+      </form>
+    </div>
   </div>
 </div>
 
@@ -299,7 +349,12 @@
   <!-- TEAM (admin) -->
   <section class="view" id="view-team" hidden>
     <div class="bank-head"><h2>Team</h2><span id="teamTotal">0 people</span></div>
-    <button class="btn primary" id="btnAddUser" style="margin:6px 0 8px">+ Create login</button>
+    <div id="requestsWrap"></div>
+    <div style="display:flex;gap:8px;margin:6px 0 12px">
+      <button class="btn primary" id="btnInvite">✉ Invite someone</button>
+      <button class="btn ghost auto" id="btnAddUser">Create login</button>
+    </div>
+    <div class="section-label" id="membersLabel">Members</div>
     <div id="userList"></div>
   </section>
 
@@ -376,6 +431,36 @@
   <label class="fl" style="margin:18px 2px 9px">Reset password</label>
   <div style="display:flex;gap:8px"><input type="text" id="mg_pass" placeholder="new password (6+ chars)" autocomplete="off"/><button class="btn ghost sm" id="mg_gen" type="button" style="flex:none">Generate</button></div>
   <div class="btn-row"><button class="btn danger auto" id="mg_delete">Delete</button><button class="btn primary" id="mg_save">Save changes</button></div>
+</div>
+
+<!-- INVITE / APPROVE -->
+<div class="sheet" id="sheetInvite">
+  <div class="grabber"></div>
+  <h3 id="inviteTitle">Invite <span class="em">someone</span></h3>
+  <p class="desc">They'll get a link to set their own password and join with the role you pick.</p>
+  <div class="sheet-err" id="inviteErr"></div>
+  <div class="stack">
+    <div><label class="fl">Email</label><input type="email" id="if_email" placeholder="name@email.com" autocomplete="off" style="margin-top:9px"/></div>
+    <div><label class="fl">Name <span style="color:var(--ink-faint)">— optional</span></label><input type="text" id="if_name" placeholder="Their name" autocomplete="off" style="margin-top:9px"/></div>
+    <div>
+      <label class="fl" style="margin-bottom:9px">Role</label>
+      <div class="role-seg" id="if_roles">
+        <div class="rs" data-role="viewer">Viewer<small>Browse only</small></div>
+        <div class="rs" data-role="importer">Importer<small>Submit links</small></div>
+        <div class="rs" data-role="admin">Admin<small>Full access</small></div>
+      </div>
+    </div>
+  </div>
+  <div class="btn-row"><button class="btn ghost auto" id="inviteCancel">Cancel</button><button class="btn primary" id="inviteSave">Create invite link</button></div>
+</div>
+
+<!-- SHARE (invite link / credentials) -->
+<div class="sheet" id="sheetShare">
+  <div class="grabber"></div>
+  <h3 id="shareTitle">Invite link ready ✓</h3>
+  <p class="desc" id="shareDesc">Send this to them — when they open it, they set a password and they're in. It works once.</p>
+  <div class="sharebox"><input type="text" id="shareText" readonly /><button class="btn primary sm" id="shareCopy" style="flex:none">Copy</button></div>
+  <div class="btn-row"><button class="btn ghost" id="shareDone">Done</button></div>
 </div>
 
 <!-- ============ VIDEO LIGHTBOX ============ -->
@@ -457,12 +542,69 @@ function hidden(id){ return document.getElementById(id).hidden; }
  * ============================================================= */
 async function boot(){
   buildFormatGrid(); buildReasons();
+  // invite redemption link: #invite=<token> or ?invite=<token>
+  const inviteToken = getInviteToken();
+  if(inviteToken){ return showInvite(inviteToken); }
   if(AUTH.token){
     try{ const r=await fetch("/api/me",{headers:authHeaders()}); if(r.ok){ AUTH.user=(await r.json()).user; return enterApp(); } }catch(e){}
   }
   showLogin();
 }
-function showLogin(){ document.getElementById("gate").hidden=false; document.getElementById("mainApp").hidden=true; }
+function getInviteToken(){
+  const h=location.hash.match(/invite=([^&]+)/); if(h)return decodeURIComponent(h[1]);
+  const q=new URLSearchParams(location.search).get("invite"); return q||null;
+}
+function showLogin(){ document.getElementById("gate").hidden=false; document.getElementById("mainApp").hidden=true; showPane("Signin"); }
+function showPane(name){ ["Signin","Request","Invite"].forEach(p=>{ const el=document.getElementById("pane"+p); if(el)el.hidden = p!==name; }); }
+
+/* ---- request access ---- */
+document.getElementById("toRequest").onclick=()=>{ document.getElementById("reqErr").classList.remove("show"); document.getElementById("reqOk").classList.remove("show"); showPane("Request"); };
+document.getElementById("toSignin").onclick=()=>showPane("Signin");
+document.getElementById("requestForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();
+  const email=document.getElementById("reqEmail").value.trim();
+  const name=document.getElementById("reqName").value.trim();
+  const note=document.getElementById("reqNote").value.trim();
+  const err=document.getElementById("reqErr"), ok=document.getElementById("reqOk"), btn=document.getElementById("reqBtn");
+  err.classList.remove("show"); btn.disabled=true; btn.textContent="Sending…";
+  try{
+    const r=await fetch("/api/request-access",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,name,note})});
+    const d=await r.json(); if(!r.ok)throw new Error(d.error||"Couldn't send request");
+    ok.textContent = d.already ? "You already have an account — head back and sign in." : "Request sent ✓ — an admin will review it and send you an invite link.";
+    ok.classList.add("show");
+    document.getElementById("requestForm").querySelectorAll("input,textarea").forEach(x=>x.value="");
+  }catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
+  finally{ btn.disabled=false; btn.textContent="Send request"; }
+});
+
+/* ---- invite redemption ---- */
+async function showInvite(token){
+  document.getElementById("gate").hidden=false; document.getElementById("mainApp").hidden=true;
+  showPane("Invite"); window._inviteToken=token;
+  try{
+    const r=await fetch("/api/invite?token="+encodeURIComponent(token));
+    const d=await r.json();
+    if(!r.ok||!d.valid){ document.getElementById("invSub").textContent="This invite is invalid or already used. Ask the admin for a new one."; document.getElementById("inviteForm").style.display="none"; return; }
+    document.getElementById("invEmail").value=d.email;
+    document.getElementById("invName").value=d.name||"";
+    document.getElementById("invSub").textContent=`Set a password to join as ${d.role}.`;
+  }catch(e){ document.getElementById("invSub").textContent="Couldn't load this invite. Check your connection."; }
+}
+document.getElementById("inviteForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();
+  const password=document.getElementById("invPass").value;
+  const name=document.getElementById("invName").value.trim();
+  const err=document.getElementById("invErr"), btn=document.getElementById("invBtn");
+  err.classList.remove("show"); btn.disabled=true; btn.textContent="Creating…";
+  try{
+    const r=await fetch("/api/invite-accept",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:window._inviteToken,password,name})});
+    const d=await r.json(); if(!r.ok)throw new Error(d.error||"Couldn't create account");
+    AUTH.token=d.token; AUTH.user=d.user; localStorage.setItem("reel.token",d.token);
+    history.replaceState(null,"",location.pathname); // strip invite token from URL
+    enterApp();
+  }catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
+  finally{ btn.disabled=false; btn.textContent="Create account & sign in"; }
+});
 async function enterApp(){
   document.getElementById("gate").hidden=true; document.getElementById("mainApp").hidden=false;
   const u=AUTH.user;
@@ -640,11 +782,86 @@ function renderRecent(){
 /* ============================================================= *
  *  TEAM (admin)
  * ============================================================= */
-let USERS=[];
+let USERS=[], REQUESTS=[];
 async function loadUsers(){
+  loadRequests();
   try{ const r=await api("/api/users"); if(!r.ok)throw new Error(); USERS=(await r.json()).users||[]; renderUsers(); }
   catch(e){ document.getElementById("userList").innerHTML=`<div class="bank-empty">Couldn't load team.</div>`; }
 }
+async function loadRequests(){
+  try{ const r=await api("/api/requests"); if(!r.ok)throw new Error(); REQUESTS=(await r.json()).requests||[]; renderRequests(); }
+  catch(e){ REQUESTS=[]; renderRequests(); }
+}
+function renderRequests(){
+  const wrap=document.getElementById("requestsWrap"); wrap.innerHTML="";
+  if(!REQUESTS.length)return;
+  const label=document.createElement("div"); label.className="section-label";
+  label.innerHTML=`Pending requests <span class="cnt">${REQUESTS.length}</span>`;
+  wrap.appendChild(label);
+  REQUESTS.forEach(rq=>{
+    const el=document.createElement("div"); el.className="reqcard";
+    const nm=rq.name||rq.email.split("@")[0];
+    el.innerHTML=`<div class="rtop"><div class="rav">${esc(nm.slice(0,1).toUpperCase())}</div>
+      <div class="rmeta"><div class="rn">${esc(nm)}</div><div class="re">${esc(rq.email)}</div></div></div>
+      ${rq.note?`<div class="rnote">“${esc(rq.note)}”</div>`:""}
+      <div class="racts"><button class="btn ghost sm rq-deny" style="flex:1">Deny</button><button class="btn green sm rq-appr" style="flex:2">Approve →</button></div>`;
+    el.querySelector(".rq-deny").onclick=()=>denyRequest(rq);
+    el.querySelector(".rq-appr").onclick=()=>openInvite({email:rq.email,name:rq.name,approve:true});
+    wrap.appendChild(el);
+  });
+}
+async function denyRequest(rq){
+  if(!confirm(`Deny the request from ${rq.email}?`))return;
+  try{ await api("/api/requests",{method:"POST",body:JSON.stringify({action:"deny",email:rq.email})}); REQUESTS=REQUESTS.filter(x=>x.email!==rq.email); renderRequests(); toast("Request denied","red"); }
+  catch(e){ toast("Couldn't deny","amber"); }
+}
+
+/* invite / approve sheet (shared) */
+let ifRole="viewer", ifApprove=false;
+function openInvite({email="",name="",approve=false}={}){
+  ifApprove=approve; ifRole="viewer";
+  document.getElementById("inviteTitle").innerHTML = approve?`Approve <span class="em">${esc(name||email.split("@")[0])}</span>`:`Invite <span class="em">someone</span>`;
+  document.getElementById("if_email").value=email; document.getElementById("if_email").readOnly=approve;
+  document.getElementById("if_email").style.opacity=approve?".7":"1";
+  document.getElementById("if_name").value=name||"";
+  document.getElementById("inviteSave").textContent=approve?"Approve & create link":"Create invite link";
+  document.getElementById("inviteErr").classList.remove("show");
+  paintSeg("if_roles",ifRole);
+  openSheet("sheetInvite");
+}
+document.querySelectorAll("#if_roles .rs").forEach(rs=>rs.onclick=()=>{ ifRole=rs.dataset.role; paintSeg("if_roles",ifRole); });
+document.getElementById("btnInvite").onclick=()=>openInvite();
+document.getElementById("inviteCancel").onclick=closeSheets;
+document.getElementById("inviteSave").onclick=async()=>{
+  const email=document.getElementById("if_email").value.trim();
+  const name=document.getElementById("if_name").value.trim();
+  const err=document.getElementById("inviteErr"); err.classList.remove("show");
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent="Enter a valid email."; err.classList.add("show"); return; }
+  const btn=document.getElementById("inviteSave"); btn.disabled=true; btn.textContent="Creating…";
+  try{
+    const r=await api("/api/requests",{method:"POST",body:JSON.stringify({action:ifApprove?"approve":"invite",email,name,role:ifRole})});
+    const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
+    if(ifApprove)REQUESTS=REQUESTS.filter(x=>x.email!==email);
+    closeSheets(); renderRequests();
+    const link=`${location.origin}/#invite=${d.token}`;
+    showShare("Invite link ready ✓", `Send this to ${email} — they open it, set a password, and join as ${ifRole}. It works once.`, link);
+  }catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
+  finally{ btn.disabled=false; btn.textContent=ifApprove?"Approve & create link":"Create invite link"; }
+};
+
+/* share sheet */
+function showShare(title,desc,text){
+  document.getElementById("shareTitle").textContent=title;
+  document.getElementById("shareDesc").textContent=desc;
+  document.getElementById("shareText").value=text;
+  openSheet("sheetShare");
+}
+document.getElementById("shareCopy").onclick=async()=>{
+  const t=document.getElementById("shareText"); t.select();
+  try{ await navigator.clipboard.writeText(t.value); }catch(e){ try{document.execCommand("copy");}catch(_){} }
+  const b=document.getElementById("shareCopy"); b.textContent="Copied!"; setTimeout(()=>b.textContent="Copy",1500);
+};
+document.getElementById("shareDone").onclick=closeSheets;
 function renderUsers(){
   document.getElementById("teamTotal").textContent=`${USERS.length} ${USERS.length===1?"person":"people"}`;
   const wrap=document.getElementById("userList"); wrap.innerHTML="";
@@ -718,7 +935,7 @@ document.getElementById("mg_delete").onclick=async()=>{
   try{ const r=await api("/api/users",{method:"POST",body:JSON.stringify({action:"delete",id:manageUser.id,email:manageUser.email})}); const d=await r.json(); if(!r.ok)throw new Error(d.error); USERS=USERS.filter(u=>u.id!==manageUser.id); renderUsers(); closeSheets(); toast("Login deleted","red"); }
   catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
 };
-function showCreds(email,password){ setTimeout(()=>{ window.prompt("Copy these credentials and send them to the person:", `${email}  /  ${password}`); },160); toast("Login ready — copy the credentials","green"); }
+function showCreds(email,password){ showShare("Login created ✓", `Send these to ${email}. They can sign in right away and change the password later.`, `${email}  /  ${password}`); }
 function paintSeg(id,role){ document.querySelectorAll(`#${id} .rs`).forEach(rs=>rs.classList.toggle("sel",rs.dataset.role===role)); }
 function genPass(){ const all="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"; let s=""; for(let i=0;i<10;i++)s+=all[Math.floor(Math.random()*all.length)]; return s; }
 

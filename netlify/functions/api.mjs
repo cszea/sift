@@ -81,6 +81,22 @@ async function getState(store) { return (await store.get("state", { type: "json"
 async function setState(store, s) { await store.setJSON("state", s); }
 function publicUser(u) { return { id: u.id, email: u.email, name: u.name, role: u.role, createdAt: u.createdAt }; }
 
+/* Access requests (self-serve) and invites — per-key blobs, like users. */
+const rKey = (email) => "req:" + String(email).toLowerCase().trim();
+async function getRequest(store, email) { return await store.get(rKey(email), { type: "json" }); }
+async function putRequest(store, r) { await store.setJSON(rKey(r.email), r); }
+async function deleteRequest(store, email) { await store.delete(rKey(email)); }
+async function listRequests(store) {
+  const { blobs } = await store.list({ prefix: "req:" });
+  const out = []; for (const b of blobs) { const r = await store.get(b.key, { type: "json" }); if (r) out.push(r); }
+  return out;
+}
+const iKey = (t) => "invite:" + t;
+async function getInvite(store, t) { return await store.get(iKey(t), { type: "json" }); }
+async function putInvite(store, i) { await store.setJSON(iKey(i.token), i); }
+async function deleteInvite(store, t) { await store.delete(iKey(t)); }
+const emailOk = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
+
 /* Seed the first admin from env vars if it doesn't exist yet (idempotent). */
 async function ensureBootstrap(store) {
   const email = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
@@ -101,6 +117,10 @@ export default async (req) => {
     await ensureBootstrap(store);
 
     if (path === "/api/login") return await login(req, store);
+    // public self-serve access flows
+    if (path === "/api/request-access") return await requestAccess(req, store);
+    if (path === "/api/invite") return await inviteInfo(req, store);
+    if (path === "/api/invite-accept") return await inviteAccept(req, store);
 
     // everything else requires a valid token
     const auth = requireAuth(req);
@@ -110,6 +130,7 @@ export default async (req) => {
     if (path === "/api/state") return await stateRoute(req, store, auth);
     if (path === "/api/import") return await importRoute(req, store, auth);
     if (path === "/api/users") return await usersRoute(req, store, auth);
+    if (path === "/api/requests") return await requestsRoute(req, store, auth);
     return json({ error: "Not found" }, 404);
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500);
@@ -227,6 +248,71 @@ async function usersRoute(req, store, auth) {
     const u = { id: rid(), email, name: (b.name || "").trim() || email.split("@")[0], role, salt, hash, createdAt: Date.now() };
     await putUser(store, u);
     return json({ ok: true, user: publicUser(u) });
+  }
+  return json({ error: "Method not allowed" }, 405);
+}
+
+/* --- public: someone requests access from the login screen --- */
+async function requestAccess(req, store) {
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const { email, name, note } = await req.json().catch(() => ({}));
+  const e = String(email || "").toLowerCase().trim();
+  if (!emailOk(e)) return json({ error: "Enter a valid email" }, 400);
+  if (await getUser(store, e)) return json({ ok: true, already: true }); // already has access
+  const existing = await getRequest(store, e);
+  await putRequest(store, {
+    email: e, name: String(name || "").trim().slice(0, 80), note: String(note || "").trim().slice(0, 300),
+    createdAt: existing ? existing.createdAt : Date.now(), status: "pending"
+  });
+  return json({ ok: true });
+}
+
+/* --- public: read an invite (to render the "set your password" screen) --- */
+async function inviteInfo(req, store) {
+  const t = new URL(req.url).searchParams.get("token");
+  const i = t ? await getInvite(store, t) : null;
+  if (!i) return json({ valid: false }, 404);
+  return json({ valid: true, email: i.email, role: i.role, name: i.name || "" });
+}
+
+/* --- public: redeem an invite by setting a password --- */
+async function inviteAccept(req, store) {
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const { token, password, name } = await req.json().catch(() => ({}));
+  const i = token ? await getInvite(store, token) : null;
+  if (!i) return json({ error: "This invite is invalid or has already been used" }, 400);
+  if (String(password || "").length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
+  if (await getUser(store, i.email)) { await deleteInvite(store, token); return json({ error: "An account already exists for this email — try signing in" }, 409); }
+  const { salt, hash } = hashPassword(password);
+  const u = { id: rid(), email: i.email, name: String(name || i.name || "").trim() || i.email.split("@")[0], role: ROLES.includes(i.role) ? i.role : "viewer", salt, hash, createdAt: Date.now() };
+  await putUser(store, u);
+  await deleteInvite(store, token);
+  await deleteRequest(store, i.email);
+  const sess = sign({ sub: u.id, email: u.email, name: u.name, role: u.role, iat: Date.now(), exp: Date.now() + 30 * DAY });
+  return json({ token: sess, user: publicUser(u) });
+}
+
+/* --- admin: list requests, approve/deny, or invite an email directly --- */
+async function requestsRoute(req, store, auth) {
+  if (auth.role !== "admin") return json({ error: "Admins only" }, 403);
+  if (req.method === "GET") {
+    const rs = await listRequests(store);
+    return json({ requests: rs.sort((a, b) => a.createdAt - b.createdAt) });
+  }
+  if (req.method === "POST") {
+    const b = await req.json().catch(() => ({}));
+    const e = String(b.email || "").toLowerCase().trim();
+    if (b.action === "deny") { if (e) await deleteRequest(store, e); return json({ ok: true }); }
+    if (b.action === "approve" || b.action === "invite") {
+      if (!emailOk(e)) return json({ error: "Valid email required" }, 400);
+      if (await getUser(store, e)) return json({ error: "That email already has an account" }, 409);
+      const role = ROLES.includes(b.role) ? b.role : "viewer";
+      const token = rid() + rid().replace(/-/g, "").slice(0, 10);
+      await putInvite(store, { token, email: e, role, name: String(b.name || "").trim(), createdBy: auth.email, createdAt: Date.now() });
+      if (b.action === "approve") await deleteRequest(store, e);
+      return json({ ok: true, token, email: e, role });
+    }
+    return json({ error: "Unknown action" }, 400);
   }
   return json({ error: "Method not allowed" }, 405);
 }
