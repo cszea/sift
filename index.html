@@ -1,0 +1,825 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>REEL — Reference Swipe</title>
+<style>
+  /* ============================== TOKENS ============================== */
+  :root{
+    --bg:#0b0a09;
+    --bg-2:#100e0c;
+    --panel:#141210;
+    --panel-2:#1a1714;
+    --line:rgba(255,255,255,.08);
+    --line-2:rgba(255,255,255,.14);
+    --ink:#f5f1ea;
+    --ink-dim:#a49b8e;
+    --ink-faint:#6f665b;
+    --amber:#ff8a3d;
+    --amber-2:#ffb066;
+    --amber-glow:rgba(255,138,61,.45);
+    --green:#37d67a;
+    --green-glow:rgba(55,214,122,.35);
+    --red:#ff4d5e;
+    --red-glow:rgba(255,77,94,.35);
+    --radius:22px;
+    --shadow:0 40px 80px -30px rgba(0,0,0,.9);
+    --font:"Inter","Helvetica Neue",-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    --mono:"SF Mono",ui-monospace,"JetBrains Mono",Menlo,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{
+    font-family:var(--font);
+    background:var(--bg);
+    color:var(--ink);
+    overflow:hidden;
+    letter-spacing:-.01em;
+    -webkit-font-smoothing:antialiased;
+  }
+  /* warm cinematic ambient light, like the reference */
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:
+      radial-gradient(1200px 700px at 82% 8%, rgba(255,138,61,.16), transparent 60%),
+      radial-gradient(900px 600px at 12% 100%, rgba(255,120,40,.10), transparent 55%),
+      linear-gradient(180deg,#0c0a09,#080706);
+  }
+  ::selection{background:var(--amber);color:#1a0f06}
+
+  .app{position:relative;z-index:1;height:100dvh;display:flex;flex-direction:column;max-width:520px;margin:0 auto}
+
+  /* ============================== TOP BAR ============================== */
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 10px}
+  .brand{display:flex;align-items:center;gap:11px}
+  .mark{
+    width:30px;height:30px;border-radius:9px;display:grid;place-items:center;
+    background:linear-gradient(150deg,var(--amber),#ff5e2c);
+    box-shadow:0 8px 24px -6px var(--amber-glow), inset 0 1px 0 rgba(255,255,255,.35);
+    font-weight:800;font-size:15px;color:#160a03;
+  }
+  .brand .name{font-weight:700;font-size:16px;letter-spacing:.02em}
+  .brand .name b{color:var(--amber-2)}
+  .topbar .count{font:600 11px/1 var(--mono);color:var(--ink-faint);letter-spacing:.12em;text-transform:uppercase}
+  .sync{display:inline-flex;align-items:center;gap:6px;font:600 10px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+  .sync .d{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green-glow)}
+  .sync.syncing .d{background:var(--amber);box-shadow:0 0 10px var(--amber-glow);animation:pulse 1s infinite}
+  .sync.offline .d{background:var(--ink-faint);box-shadow:none}
+  .sync.offline{color:var(--ink-faint)}
+  @keyframes pulse{50%{opacity:.35}}
+
+  /* ============================== TABS ============================== */
+  .tabs{display:flex;gap:6px;padding:6px;margin:6px 22px 0;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px}
+  .tab{
+    flex:1;border:0;background:transparent;color:var(--ink-dim);
+    font:600 12.5px/1 var(--font);letter-spacing:.02em;padding:10px 8px;border-radius:10px;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;gap:7px;transition:.22s;
+  }
+  .tab .badge{font:700 10px/1 var(--mono);background:rgba(255,255,255,.08);color:var(--ink-dim);padding:3px 6px;border-radius:20px}
+  .tab.active{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.04));color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
+  .tab.active .badge{background:var(--amber);color:#160a03}
+
+  /* ============================== VIEWS ============================== */
+  .view{flex:1;position:relative;overflow:hidden}
+  .view[hidden]{display:none!important}
+
+  /* ---------- SWIPE VIEW ---------- */
+  #view-swipe{display:flex;flex-direction:column}
+  .stage{flex:1;position:relative;padding:18px 22px 4px}
+  .deck{position:absolute;inset:18px 22px 4px}
+
+  .card{
+    position:absolute;inset:0;border-radius:var(--radius);overflow:hidden;
+    background:var(--panel);border:1px solid var(--line-2);
+    box-shadow:var(--shadow);
+    will-change:transform;cursor:grab;user-select:none;
+    transform-origin:center 120%;
+  }
+  .card:active{cursor:grabbing}
+  .card .media{position:absolute;inset:0}
+  .card .media img{width:100%;height:100%;object-fit:cover}
+  .card .media .fallback{
+    position:absolute;inset:0;display:grid;place-items:center;
+    background:
+      radial-gradient(120% 80% at 78% 12%, rgba(255,138,61,.5), transparent 55%),
+      linear-gradient(160deg,#241a12,#0e0b09 70%);
+  }
+  .card .media .fallback .glyph{font-size:60px;filter:drop-shadow(0 10px 30px rgba(0,0,0,.6));opacity:.9}
+  .card .scrim{position:absolute;inset:0;background:linear-gradient(180deg,rgba(0,0,0,.15) 0%,transparent 28%,transparent 42%,rgba(8,6,5,.55) 72%,rgba(8,6,5,.94) 100%)}
+
+  .card .topmeta{position:absolute;top:16px;left:16px;right:16px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+  .pill{display:inline-flex;align-items:center;gap:7px;background:rgba(10,8,6,.55);backdrop-filter:blur(10px);border:1px solid var(--line-2);color:var(--ink);font:600 11px/1 var(--font);letter-spacing:.04em;padding:8px 11px;border-radius:100px}
+  .pill .dot{width:6px;height:6px;border-radius:50%;background:var(--amber)}
+  .pill.tiktok .dot{background:#25f4ee}
+  .pill.reels .dot{background:#ff2d78}
+  .pill.shorts .dot{background:#ff2b2b}
+
+  .card .info{position:absolute;left:20px;right:20px;bottom:22px}
+  .card .info .kicker{font:700 10.5px/1 var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--amber-2);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+  .card .info .kicker::before{content:"";width:16px;height:1px;background:var(--amber)}
+  .card .info h2{font-size:26px;line-height:1.08;font-weight:700;letter-spacing:-.02em;margin-bottom:8px}
+  .card .info p{font-size:13.5px;line-height:1.5;color:var(--ink-dim);max-width:92%}
+  .card .info .sub{margin-top:14px;display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font:600 11px/1 var(--font);color:var(--ink-dim);background:rgba(255,255,255,.05);border:1px solid var(--line);padding:7px 10px;border-radius:8px}
+
+  /* swipe stamps */
+  .stamp{position:absolute;top:32px;padding:8px 16px;border-radius:12px;font:800 22px/1 var(--font);letter-spacing:.08em;opacity:0;transform:scale(.8);transition:opacity .05s}
+  .stamp.like{left:24px;color:var(--green);border:3px solid var(--green);rotate:-16deg;text-shadow:0 0 30px var(--green-glow);box-shadow:0 0 40px -10px var(--green-glow)}
+  .stamp.nope{right:24px;color:var(--red);border:3px solid var(--red);rotate:16deg;text-shadow:0 0 30px var(--red-glow);box-shadow:0 0 40px -10px var(--red-glow)}
+
+  /* directional tint overlays */
+  .card .tint{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .08s}
+  .card .tint.green{background:linear-gradient(90deg,transparent,rgba(55,214,122,.28))}
+  .card .tint.red{background:linear-gradient(270deg,transparent,rgba(255,77,94,.28))}
+
+  .empty{position:absolute;inset:18px 22px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:14px;border:1px dashed var(--line-2);border-radius:var(--radius);color:var(--ink-dim)}
+  .empty .big{font-size:46px}
+  .empty h3{color:var(--ink);font-size:19px;font-weight:700}
+  .empty p{font-size:13.5px;max-width:70%}
+
+  /* action bar */
+  .actions{display:flex;align-items:center;justify-content:center;gap:18px;padding:16px 22px 22px}
+  .act{
+    border:1px solid var(--line-2);background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    color:var(--ink);border-radius:50%;display:grid;place-items:center;cursor:pointer;
+    transition:transform .15s cubic-bezier(.34,1.56,.64,1),box-shadow .2s,border-color .2s;
+  }
+  .act:active{transform:scale(.9)}
+  .act svg{width:24px;height:24px}
+  .act.big{width:66px;height:66px}
+  .act.small{width:50px;height:50px}
+  .act.nope:hover{border-color:var(--red);color:var(--red);box-shadow:0 0 30px -8px var(--red-glow)}
+  .act.like:hover{border-color:var(--green);color:var(--green);box-shadow:0 0 30px -8px var(--green-glow)}
+  .act.rewind:hover{border-color:var(--amber);color:var(--amber-2);box-shadow:0 0 24px -8px var(--amber-glow)}
+  .act.info:hover{border-color:var(--line-2);color:var(--ink)}
+  .act.like{background:linear-gradient(180deg,#153a26,#0e2519);border-color:rgba(55,214,122,.35)}
+  .act.like svg{color:var(--green)}
+  .act.nope{background:linear-gradient(180deg,#3a1519,#25100f);border-color:rgba(255,77,94,.35)}
+  .act.nope svg{color:var(--red)}
+
+  /* ---------- BANK VIEW ---------- */
+  #view-bank{overflow-y:auto;padding:16px 22px 40px}
+  .bank-head{display:flex;align-items:baseline;justify-content:space-between;margin:4px 0 14px}
+  .bank-head h2{font-size:20px;font-weight:700}
+  .bank-head span{font:600 12px/1 var(--mono);color:var(--ink-faint)}
+  .fmt-scroll{display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin:0 -22px;padding-left:22px;padding-right:22px;scrollbar-width:none}
+  .fmt-scroll::-webkit-scrollbar{display:none}
+  .fmt{white-space:nowrap;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink-dim);font:600 12.5px/1 var(--font);padding:9px 13px;border-radius:100px;cursor:pointer;display:flex;gap:7px;align-items:center;transition:.2s}
+  .fmt .n{font:700 10px/1 var(--mono);opacity:.7}
+  .fmt.active{background:var(--amber);color:#160a03;border-color:transparent}
+  .fmt.active .n{opacity:.85}
+
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:16px}
+  .bcard{position:relative;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:var(--panel);aspect-ratio:3/4;cursor:pointer;transition:transform .2s,border-color .2s}
+  .bcard:hover{transform:translateY(-3px);border-color:var(--line-2)}
+  .bcard .media{position:absolute;inset:0}
+  .bcard .media img{width:100%;height:100%;object-fit:cover}
+  .bcard .media .fallback{position:absolute;inset:0;display:grid;place-items:center;background:radial-gradient(120% 80% at 75% 15%,rgba(255,138,61,.4),transparent 55%),linear-gradient(160deg,#241a12,#0e0b09)}
+  .bcard .media .fallback span{font-size:34px}
+  .bcard .sc{position:absolute;inset:0;background:linear-gradient(180deg,transparent 40%,rgba(8,6,5,.92))}
+  .bcard .lbl{position:absolute;left:11px;right:11px;bottom:11px}
+  .bcard .lbl .t{font-size:12.5px;font-weight:700;line-height:1.2;margin-bottom:5px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .bcard .lbl .p{font:600 9.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--amber-2)}
+  .bcard .plat{position:absolute;top:9px;left:9px;width:8px;height:8px;border-radius:50%;box-shadow:0 0 0 3px rgba(0,0,0,.35)}
+  .bcard .del{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(8,6,5,.65);border:1px solid var(--line-2);color:var(--ink-dim);display:grid;place-items:center;opacity:0;transition:.2s;cursor:pointer}
+  .bcard:hover .del{opacity:1}
+  .bcard .del:hover{color:var(--red);border-color:var(--red)}
+  .bank-empty{text-align:center;color:var(--ink-faint);padding:60px 20px;font-size:14px}
+
+  /* ---------- PASSED small list reuse grid ---------- */
+
+  /* ============================== FAB ============================== */
+  .fab{
+    position:absolute;bottom:calc(16px + env(safe-area-inset-bottom));right:22px;z-index:20;
+    display:none;width:56px;height:56px;border-radius:50%;border:0;cursor:pointer;
+    background:linear-gradient(150deg,var(--amber),#ff5e2c);color:#160a03;
+    box-shadow:0 16px 40px -10px var(--amber-glow),inset 0 1px 0 rgba(255,255,255,.35);
+    place-items:center;font-size:26px;transition:transform .15s}
+  .fab:active{transform:scale(.92)}
+  #view-bank:not([hidden]) ~ .fab, .fab.show{display:grid}
+
+  /* ============================== SHEETS / MODALS ============================== */
+  .scrim-bg{position:fixed;inset:0;z-index:40;background:rgba(5,4,3,.68);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .28s}
+  .scrim-bg.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:fixed;left:50%;bottom:0;transform:translate(-50%,102%);z-index:41;
+    width:100%;max-width:520px;background:linear-gradient(180deg,var(--panel-2),var(--panel));
+    border-top-left-radius:26px;border-top-right-radius:26px;border:1px solid var(--line-2);border-bottom:0;
+    padding:10px 22px calc(26px + env(safe-area-inset-bottom));transition:transform .34s cubic-bezier(.22,1,.36,1);
+    box-shadow:0 -30px 80px -20px rgba(0,0,0,.8)}
+  .sheet.open{transform:translate(-50%,0)}
+  .grabber{width:40px;height:4px;border-radius:100px;background:var(--line-2);margin:8px auto 18px}
+  .sheet h3{font-size:19px;font-weight:700;margin-bottom:4px}
+  .sheet .desc{font-size:13px;color:var(--ink-dim);margin-bottom:18px;line-height:1.5}
+  .sheet h3 .em{color:var(--amber-2)}
+
+  .fmt-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .fmt-opt{
+    display:flex;align-items:center;gap:11px;text-align:left;
+    border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);
+    padding:14px 14px;border-radius:14px;cursor:pointer;transition:.18s;font:600 13.5px/1.1 var(--font)}
+  .fmt-opt:hover{border-color:var(--green);background:rgba(55,214,122,.06)}
+  .fmt-opt .ic{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;font-size:17px;background:rgba(255,138,61,.14);border:1px solid rgba(255,138,61,.2);flex:none}
+  .fmt-opt .meta{display:flex;flex-direction:column;gap:3px}
+  .fmt-opt .meta small{font:600 10px/1 var(--mono);color:var(--ink-faint);letter-spacing:.06em}
+
+  .reasons{display:flex;flex-wrap:wrap;gap:9px;margin-bottom:16px}
+  .reason{border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink-dim);font:600 12.5px/1 var(--font);padding:10px 13px;border-radius:100px;cursor:pointer;transition:.18s}
+  .reason:hover{color:var(--ink);border-color:var(--line-2)}
+  .reason.sel{background:var(--red);border-color:transparent;color:#fff}
+  textarea,input[type=text],input[type=url]{
+    width:100%;background:rgba(0,0,0,.35);border:1px solid var(--line-2);border-radius:14px;
+    color:var(--ink);font:500 14px/1.5 var(--font);padding:14px 15px;resize:none;outline:none;transition:.2s}
+  textarea:focus,input:focus{border-color:var(--amber);box-shadow:0 0 0 3px rgba(255,138,61,.14)}
+  textarea::placeholder,input::placeholder{color:var(--ink-faint)}
+
+  .btn-row{display:flex;gap:10px;margin-top:16px}
+  .btn{flex:1;border:0;border-radius:14px;padding:15px;font:700 14px/1 var(--font);cursor:pointer;transition:transform .12s,filter .2s;display:flex;align-items:center;justify-content:center;gap:8px}
+  .btn:active{transform:scale(.97)}
+  .btn.ghost{background:rgba(255,255,255,.05);border:1px solid var(--line-2);color:var(--ink-dim);flex:0 0 auto;padding:15px 20px}
+  .btn.primary{background:linear-gradient(150deg,var(--amber),#ff5e2c);color:#160a03}
+  .btn.danger{background:linear-gradient(150deg,#ff5e6e,#e23144);color:#fff}
+  .btn.green{background:linear-gradient(150deg,#3fe084,#1fae5c);color:#052913}
+
+  .platform-hint{display:flex;gap:8px;margin-top:12px}
+  .platform-hint .ph{flex:1;text-align:center;font:600 10.5px/1 var(--mono);letter-spacing:.06em;color:var(--ink-faint);padding:9px 6px;border:1px solid var(--line);border-radius:10px;text-transform:uppercase}
+  .field-label{font:700 10.5px/1 var(--mono);letter-spacing:.18em;text-transform:uppercase;color:var(--ink-faint);margin:0 2px 9px}
+
+  /* toast */
+  .toast{position:fixed;left:50%;bottom:calc(24px + env(safe-area-inset-bottom));transform:translate(-50%,20px);z-index:60;
+    background:rgba(20,17,14,.94);border:1px solid var(--line-2);backdrop-filter:blur(12px);color:var(--ink);
+    padding:13px 18px;border-radius:14px;font:600 13px/1 var(--font);display:flex;align-items:center;gap:10px;
+    opacity:0;pointer-events:none;transition:.3s;box-shadow:var(--shadow);max-width:90%}
+  .toast.show{opacity:1;transform:translate(-50%,0)}
+  .toast .dt{width:8px;height:8px;border-radius:50%;background:var(--green);flex:none}
+  .toast.red .dt{background:var(--red)}
+  .toast.amber .dt{background:var(--amber)}
+
+  @media (max-width:400px){.card .info h2{font-size:23px}}
+</style>
+</head>
+<body>
+<div class="app">
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="mark">R</div>
+      <div class="name">REEL<b>·</b>bank</div>
+    </div>
+    <div style="display:flex;align-items:center;gap:14px">
+      <span class="sync saved" id="sync"><span class="d"></span><span class="t">Synced</span></span>
+      <span class="count" id="hdrCount">— to review</span>
+    </div>
+  </header>
+
+  <!-- TABS -->
+  <nav class="tabs">
+    <button class="tab active" data-view="swipe">Discover</button>
+    <button class="tab" data-view="bank">Bank <span class="badge" id="bankBadge">0</span></button>
+  </nav>
+
+  <!-- ============ SWIPE VIEW ============ -->
+  <section class="view" id="view-swipe">
+    <div class="stage">
+      <div class="deck" id="deck"></div>
+    </div>
+    <div class="actions">
+      <button class="act small rewind" id="btnRewind" title="Undo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4-4M3 8l4 4M3 8h11a7 7 0 0 1 0 14H8"/></svg>
+      </button>
+      <button class="act big nope" id="btnNope" title="Pass">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+      <button class="act big like" id="btnLike" title="Keep">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 21s-8-4.9-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 6.1-8 11-8 11z"/></svg>
+      </button>
+      <button class="act small info" id="btnOpen" title="Open link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4l-9 9M18 14v4a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4"/></svg>
+      </button>
+    </div>
+  </section>
+
+  <!-- ============ BANK VIEW ============ -->
+  <section class="view" id="view-bank" hidden>
+    <div class="bank-head">
+      <h2>Video Bank</h2>
+      <span id="bankTotal">0 saved</span>
+    </div>
+    <div class="fmt-scroll" id="fmtScroll"></div>
+    <div class="grid" id="bankGrid"></div>
+  </section>
+
+  <button class="fab" id="fab" title="Add video">+</button>
+</div>
+
+<!-- ============ MODAL SCRIM ============ -->
+<div class="scrim-bg" id="scrim"></div>
+
+<!-- KEEP → format picker -->
+<div class="sheet" id="sheetFormat">
+  <div class="grabber"></div>
+  <h3>Kept it. <span class="em">Which format?</span></h3>
+  <p class="desc">File this reference into the bank so it's ready when you plan the next shoot.</p>
+  <div class="fmt-grid" id="fmtGrid"></div>
+</div>
+
+<!-- PASS → reason -->
+<div class="sheet" id="sheetPass">
+  <div class="grabber"></div>
+  <h3>Passed. <span class="em">Why? <small style="color:var(--ink-faint);font-weight:600;font-size:12px">(optional)</small></span></h3>
+  <p class="desc">A quick note goes back to whoever submitted it. Skip if you're moving fast.</p>
+  <div class="reasons" id="reasonChips"></div>
+  <textarea id="passNote" rows="2" placeholder="Add a short note…"></textarea>
+  <div class="btn-row">
+    <button class="btn ghost" id="passSkip">Skip</button>
+    <button class="btn danger" id="passConfirm">Save pass</button>
+  </div>
+</div>
+
+<!-- ADD video -->
+<div class="sheet" id="sheetAdd">
+  <div class="grabber"></div>
+  <h3>Add a <span class="em">reference</span></h3>
+  <p class="desc">Paste a link from TikTok, Instagram Reels, or YouTube Shorts. It drops straight into the feed.</p>
+  <div class="field-label">Video link</div>
+  <input type="url" id="addUrl" placeholder="https://…" autocomplete="off" />
+  <div class="platform-hint">
+    <div class="ph">TikTok</div><div class="ph">Reels</div><div class="ph">Shorts</div>
+  </div>
+  <div class="field-label" style="margin-top:16px">Title <span style="color:var(--ink-faint)">— optional</span></div>
+  <input type="text" id="addTitle" placeholder="What's the concept?" autocomplete="off" />
+  <div class="btn-row">
+    <button class="btn ghost" id="addCancel">Cancel</button>
+    <button class="btn primary" id="addConfirm">Add to feed</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"><span class="dt"></span><span id="toastMsg"></span></div>
+
+<script>
+/* ============================================================= *
+ *  REEL·bank — reference swipe app
+ * ============================================================= */
+const FORMATS = [
+  {name:"Transformations", icon:"💪", note:"Before / after"},
+  {name:"UGC",             icon:"📱", note:"Creator-style"},
+  {name:"UGC shoots",      icon:"🎬", note:"Produced UGC"},
+  {name:"Cinematic",       icon:"🎞️", note:"High production"},
+  {name:"IRL",             icon:"🌆", note:"In real life"},
+  {name:"Yaps",            icon:"🎙️", note:"Talking to cam"},
+  {name:"Routine",         icon:"⏱️", note:"Day in the life"},
+  {name:"Street interviews",icon:"🎤", note:"Man on the street"},
+];
+const REASONS = ["Off-brand","Overdone","Low quality","Wrong format","Not our vibe","Already have it"];
+
+/* seed feed so the deck isn't empty on first run */
+const SEED = [
+  {id:sid(),platform:"tiktok",title:"Slow-mo gym transformation reveal",author:"@peakform",desc:"Dramatic before/after with a beat drop on the reveal. Clean lighting.",img:""},
+  {id:sid(),platform:"reels",title:"Get-ready-with-me, one take",author:"@maya.rl",desc:"Handheld GRWM, natural light, subtle captions. Very authentic UGC energy.",img:""},
+  {id:sid(),platform:"shorts",title:"Street interview: \"what's your routine?\"",author:"@askthecity",desc:"Fast cuts between strangers, bold on-screen questions.",img:""},
+  {id:sid(),platform:"tiktok",title:"Cinematic sunrise run, drone open",author:"@ridgeline",desc:"Moody amber grade, orchestral swell, product in frame at 0:04.",img:""},
+  {id:sid(),platform:"reels",title:"POV desk-setup routine ASMR",author:"@quietdesk",desc:"No talking, ambient sound design, satisfying pacing.",img:""},
+];
+
+/* ---------- state ---------- */
+const API = "/api/state";
+const CACHE_KEY = "reel.cache.v2";
+const store = { feed: [], bank: {}, passed: [], history: [] }; // filled by boot()
+function sid(){ return Math.random().toString(36).slice(2,9); }
+function snapshot(){ return { feed:store.feed, bank:store.bank, passed:store.passed }; }
+
+/* --- shared database (Netlify Blobs via /api/state) with offline cache --- */
+let saveTimer=null, saving=false, dirty=false;
+function save(){
+  dirty = true;
+  try{ localStorage.setItem(CACHE_KEY, JSON.stringify(snapshot())); }catch(e){} // never lose work
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(pushState, 500); // debounce rapid swipes
+}
+async function pushState(){
+  if(saving){ clearTimeout(saveTimer); saveTimer=setTimeout(pushState,400); return; }
+  saving=true; setSync("syncing");
+  try{
+    const r=await fetch(API,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(snapshot())});
+    if(!r.ok) throw new Error("bad status");
+    dirty=false; setSync("saved");
+  }catch(e){ setSync("offline"); }
+  finally{ saving=false; }
+}
+async function boot(){
+  setSync("syncing");
+  let state=null;
+  try{
+    const r=await fetch(API,{cache:"no-store"});
+    if(r.ok){ state=await r.json(); setSync("saved"); } else throw new Error();
+  }catch(e){
+    setSync("offline");
+    try{ state=JSON.parse(localStorage.getItem(CACHE_KEY)); }catch(_){}
+    if(!state) state={feed:SEED,bank:{},passed:[]}; // pure-offline (file://) fallback
+  }
+  store.feed=state.feed||[]; store.bank=state.bank||{}; store.passed=state.passed||[];
+  buildFormatGrid(); buildReasons(); renderDeck(); updateCounts();
+}
+/* pull fresh state when returning to the tab, so you + Jack stay in sync */
+async function maybeRefresh(){
+  if(dirty||saving||dragState||document.querySelector(".sheet.open"))return;
+  try{
+    const r=await fetch(API,{cache:"no-store"}); if(!r.ok)return;
+    const s=await r.json();
+    store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[];
+    renderDeck(); if(!document.getElementById("view-bank").hidden) renderBankTabs(); updateCounts();
+    setSync("saved");
+  }catch(e){}
+}
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") maybeRefresh(); });
+window.addEventListener("focus",maybeRefresh);
+function setSync(s){
+  const el=document.getElementById("sync"); if(!el)return;
+  const map={syncing:["syncing","Syncing…"],saved:["saved","Synced"],offline:["offline","Offline"]};
+  const [cls,txt]=map[s]||map.saved;
+  el.className="sync "+cls; el.querySelector(".t").textContent=txt;
+}
+
+/* ---------- platform helpers ---------- */
+function detectPlatform(url){
+  const u=(url||"").toLowerCase();
+  if(u.includes("tiktok"))return"tiktok";
+  if(u.includes("instagram")||u.includes("/reel"))return"reels";
+  if(u.includes("youtu"))return"shorts";
+  return"tiktok";
+}
+const PLAT = {
+  tiktok:{label:"TikTok",color:"#25f4ee",glyph:"🎵"},
+  reels:{label:"Reels",color:"#ff2d78",glyph:"📸"},
+  shorts:{label:"Shorts",color:"#ff2b2b",glyph:"▶️"},
+};
+
+/* ============================================================= *
+ *  DECK RENDER + DRAG PHYSICS
+ * ============================================================= */
+const deck=document.getElementById("deck");
+let dragState=null;
+
+function renderDeck(){
+  deck.innerHTML="";
+  const items=store.feed.slice(0,3).reverse(); // last = top
+  if(store.feed.length===0){
+    deck.innerHTML=`<div class="empty">
+      <div class="big">🗂️</div>
+      <h3>Inbox zero</h3>
+      <p>No references left to review. Add more with the + button or check the bank.</p>
+      <button class="btn primary" style="margin-top:6px;padding:13px 22px;flex:none" onclick="openAdd()">Add a video</button>
+    </div>`;
+    updateCounts();return;
+  }
+  items.forEach((card,idx)=>{
+    const isTop = idx===items.length-1;
+    const depth = items.length-1-idx; // 0 top
+    const el=document.createElement("div");
+    el.className="card";
+    el.dataset.id=card.id;
+    const p=PLAT[card.platform]||PLAT.tiktok;
+    el.innerHTML=`
+      <div class="media">
+        ${card.img?`<img src="${card.img}" alt="">`:`<div class="fallback"><div class="glyph">${p.glyph}</div></div>`}
+      </div>
+      <div class="scrim"></div>
+      <div class="tint green"></div>
+      <div class="tint red"></div>
+      <div class="stamp like">KEEP</div>
+      <div class="stamp nope">PASS</div>
+      <div class="topmeta">
+        <span class="pill ${card.platform}"><span class="dot"></span>${p.label}</span>
+        <span class="pill">${card.author||"unknown"}</span>
+      </div>
+      <div class="info">
+        <div class="kicker">Reference</div>
+        <h2>${esc(card.title)}</h2>
+        <p>${esc(card.desc||"Tap ↗ to open the original.")}</p>
+        <div class="sub"><span class="chip">Swipe → keep</span><span class="chip">Swipe ← pass</span></div>
+      </div>`;
+    // stacked depth transform
+    const scale = 1 - depth*0.05;
+    const ty = depth*14;
+    el.style.transform=`translateY(${ty}px) scale(${scale})`;
+    el.style.opacity = depth>1 ? 0 : 1;
+    el.style.zIndex = 10-depth;
+    if(isTop) attachDrag(el,card);
+    deck.appendChild(el);
+  });
+  updateCounts();
+}
+
+function attachDrag(el,card){
+  el.addEventListener("pointerdown",start);
+  function start(e){
+    if(e.target.closest(".act"))return;
+    dragState={el,card,x0:e.clientX,y0:e.clientY,dx:0,dy:0};
+    el.setPointerCapture(e.pointerId);
+    el.style.transition="none";
+    window.addEventListener("pointermove",move);
+    window.addEventListener("pointerup",end);
+  }
+  function move(e){
+    if(!dragState)return;
+    dragState.dx=e.clientX-dragState.x0;
+    dragState.dy=e.clientY-dragState.y0;
+    applyDrag();
+  }
+  function end(){
+    window.removeEventListener("pointermove",move);
+    window.removeEventListener("pointerup",end);
+    if(!dragState)return;
+    const {dx}=dragState;
+    const threshold=110;
+    if(dx>threshold){ flyOut(1); }
+    else if(dx<-threshold){ flyOut(-1); }
+    else { snapBack(); }
+  }
+}
+function applyDrag(){
+  const {el,dx,dy}=dragState;
+  const rot=dx*0.05;
+  el.style.transform=`translate(${dx}px,${dy}px) rotate(${rot}deg)`;
+  const p=Math.min(Math.abs(dx)/110,1);
+  const like=el.querySelector(".stamp.like"), nope=el.querySelector(".stamp.nope");
+  const gT=el.querySelector(".tint.green"), rT=el.querySelector(".tint.red");
+  if(dx>0){ like.style.opacity=p; like.style.transform=`scale(${.8+p*.3})`; nope.style.opacity=0; gT.style.opacity=p; rT.style.opacity=0; }
+  else if(dx<0){ nope.style.opacity=p; nope.style.transform=`scale(${.8+p*.3})`; like.style.opacity=0; rT.style.opacity=p; gT.style.opacity=0; }
+  else { like.style.opacity=0;nope.style.opacity=0;gT.style.opacity=0;rT.style.opacity=0; }
+  // promote the card behind
+  const behind=deck.querySelectorAll(".card");
+  if(behind.length>1){
+    const b=behind[behind.length-2];
+    const s=0.95+0.05*p, t=14-14*p;
+    b.style.transition="none";
+    b.style.transform=`translateY(${t}px) scale(${s})`;
+  }
+}
+function snapBack(){
+  const {el}=dragState;
+  el.style.transition="transform .35s cubic-bezier(.22,1,.36,1)";
+  el.style.transform="translateY(0) scale(1)";
+  el.querySelectorAll(".stamp,.tint").forEach(s=>s.style.opacity=0);
+  const behind=deck.querySelectorAll(".card");
+  if(behind.length>1){const b=behind[behind.length-2];b.style.transition="transform .35s cubic-bezier(.22,1,.36,1)";b.style.transform="translateY(14px) scale(.95)";}
+  dragState=null;
+}
+function flyOut(dir){
+  const {el,card}=dragState; dragState=null;
+  el.style.transition="transform .42s cubic-bezier(.4,0,.2,1),opacity .42s";
+  const off=(window.innerWidth||520)*1.3*dir;
+  el.style.transform=`translate(${off}px,${-40}px) rotate(${dir*22}deg)`;
+  el.style.opacity=0;
+  setTimeout(()=>{ dir>0 ? onKeep(card) : onPass(card); },230);
+}
+
+/* programmatic swipe from buttons */
+function programSwipe(dir){
+  if(store.feed.length===0)return;
+  const top=deck.querySelector(".card:last-child");
+  if(!top){ dir>0?onKeep(store.feed[0]):onPass(store.feed[0]); return; }
+  const card=store.feed[0];
+  top.style.transition="transform .42s cubic-bezier(.4,0,.2,1),opacity .42s";
+  const off=(window.innerWidth||520)*1.3*dir;
+  // show stamp
+  const st=top.querySelector(dir>0?".stamp.like":".stamp.nope");
+  const ti=top.querySelector(dir>0?".tint.green":".tint.red");
+  if(st){st.style.opacity=1;st.style.transform="scale(1.1)";} if(ti)ti.style.opacity=1;
+  top.style.transform=`translate(${off}px,-40px) rotate(${dir*22}deg)`;
+  top.style.opacity=0;
+  setTimeout(()=>{ dir>0?onKeep(card):onPass(card); },230);
+}
+
+/* ============================================================= *
+ *  KEEP / PASS OUTCOMES
+ * ============================================================= */
+let pendingKeep=null, pendingPass=null;
+
+function onKeep(card){
+  store.feed=store.feed.filter(c=>c.id!==card.id);
+  pendingKeep=card;
+  renderDeck();
+  openSheet("sheetFormat");
+}
+function commitKeep(format){
+  const card=pendingKeep; if(!card)return;
+  (store.bank[format] ||= []).unshift({...card,format,savedAt:Date.now()});
+  store.history.push({type:"keep",card,format});
+  pendingKeep=null; save(); closeSheets();
+  toast(`Filed to “${format}”`, "green");
+  renderBankTabs(); updateCounts();
+}
+
+function onPass(card){
+  store.feed=store.feed.filter(c=>c.id!==card.id);
+  pendingPass=card; selectedReason=null;
+  document.getElementById("passNote").value="";
+  document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel"));
+  renderDeck();
+  openSheet("sheetPass");
+}
+function commitPass(withNote){
+  const card=pendingPass; if(!card)return;
+  const note = withNote ? (selectedReason || document.getElementById("passNote").value.trim() || "") : "";
+  store.passed.unshift({...card,reason:note,passedAt:Date.now()});
+  store.history.push({type:"pass",card});
+  pendingPass=null; save(); closeSheets();
+  toast(note?`Passed — “${note}”`:"Passed", "red");
+  updateCounts();
+}
+
+/* undo */
+function undo(){
+  const last=store.history.pop();
+  if(!last){ toast("Nothing to undo","amber"); return; }
+  if(last.type==="keep"){
+    store.bank[last.format]=(store.bank[last.format]||[]).filter(c=>c.id!==last.card.id);
+    if(store.bank[last.format]&&store.bank[last.format].length===0) delete store.bank[last.format];
+  } else {
+    store.passed=store.passed.filter(c=>c.id!==last.card.id);
+  }
+  store.feed.unshift(last.card);
+  save(); renderDeck(); renderBankTabs(); closeSheets();
+  toast("Brought it back","amber");
+}
+
+/* ============================================================= *
+ *  BANK VIEW
+ * ============================================================= */
+let bankFilter="__all";
+function renderBankTabs(){
+  const scroll=document.getElementById("fmtScroll");
+  const banked=store.bank;
+  const total=Object.values(banked).reduce((a,b)=>a+b.length,0);
+  document.getElementById("bankTotal").textContent=`${total} saved`;
+  document.getElementById("bankBadge").textContent=total;
+  const cats=Object.keys(banked).filter(k=>banked[k].length);
+  scroll.innerHTML="";
+  const allBtn=chip("All",total,bankFilter==="__all",()=>{bankFilter="__all";renderBankTabs();});
+  scroll.appendChild(allBtn);
+  FORMATS.forEach(f=>{
+    const n=(banked[f.name]||[]).length;
+    if(n===0)return;
+    scroll.appendChild(chip(f.name,n,bankFilter===f.name,()=>{bankFilter=f.name;renderBankTabs();}));
+  });
+  // any custom formats
+  cats.filter(c=>!FORMATS.some(f=>f.name===c)).forEach(c=>{
+    scroll.appendChild(chip(c,banked[c].length,bankFilter===c,()=>{bankFilter=c;renderBankTabs();}));
+  });
+  renderBankGrid();
+  function chip(label,n,active,cb){
+    const b=document.createElement("button");
+    b.className="fmt"+(active?" active":"");
+    b.innerHTML=`${label} <span class="n">${n}</span>`;
+    b.onclick=cb; return b;
+  }
+}
+function renderBankGrid(){
+  const grid=document.getElementById("bankGrid");
+  let cards=[];
+  if(bankFilter==="__all"){ Object.values(store.bank).forEach(a=>cards.push(...a)); cards.sort((a,b)=>b.savedAt-a.savedAt); }
+  else cards=store.bank[bankFilter]||[];
+  if(cards.length===0){ grid.innerHTML=`<div class="bank-empty" style="grid-column:1/-1">Nothing here yet.<br>Swipe right on references to fill the bank.</div>`; return; }
+  grid.innerHTML="";
+  cards.forEach(c=>{
+    const p=PLAT[c.platform]||PLAT.tiktok;
+    const el=document.createElement("div");
+    el.className="bcard";
+    el.innerHTML=`
+      <div class="media">${c.img?`<img src="${c.img}">`:`<div class="fallback"><span>${p.glyph}</span></div>`}</div>
+      <div class="sc"></div>
+      <span class="plat" style="background:${p.color}"></span>
+      <div class="del" title="Remove">✕</div>
+      <div class="lbl"><div class="t">${esc(c.title)}</div><div class="p">${esc(c.format||"")}</div></div>`;
+    el.querySelector(".del").onclick=(e)=>{e.stopPropagation();removeFromBank(c);};
+    el.onclick=()=>{ if(c.url) window.open(c.url,"_blank"); else toast("No link on this one","amber"); };
+    grid.appendChild(el);
+  });
+}
+function removeFromBank(card){
+  Object.keys(store.bank).forEach(k=>{
+    store.bank[k]=store.bank[k].filter(c=>c.id!==card.id);
+    if(store.bank[k].length===0)delete store.bank[k];
+  });
+  save(); renderBankTabs(); updateCounts(); toast("Removed from bank","red");
+}
+
+/* ============================================================= *
+ *  SHEETS
+ * ============================================================= */
+const scrim=document.getElementById("scrim");
+function openSheet(id){ scrim.classList.add("open"); document.getElementById(id).classList.add("open"); }
+function closeSheets(){
+  scrim.classList.remove("open");
+  document.querySelectorAll(".sheet").forEach(s=>s.classList.remove("open"));
+  // if a keep/pass was pending and user dismissed, treat as still-removed but auto-file
+  if(pendingKeep){ commitKeep(pendingKeep.format||"UGC"); }
+  if(pendingPass){ commitPass(false); }
+}
+scrim.addEventListener("click",()=>{
+  // dismissing the keep sheet without choosing → default file; pass sheet → skip
+  closeSheets();
+});
+
+/* format grid in keep sheet */
+function buildFormatGrid(){
+  const g=document.getElementById("fmtGrid"); g.innerHTML="";
+  FORMATS.forEach(f=>{
+    const b=document.createElement("button");
+    b.className="fmt-opt";
+    b.innerHTML=`<span class="ic">${f.icon}</span><span class="meta">${f.name}<small>${f.note}</small></span>`;
+    b.onclick=()=>commitKeep(f.name);
+    g.appendChild(b);
+  });
+}
+/* reason chips */
+let selectedReason=null;
+function buildReasons(){
+  const c=document.getElementById("reasonChips"); c.innerHTML="";
+  REASONS.forEach(r=>{
+    const b=document.createElement("button"); b.className="reason"; b.textContent=r;
+    b.onclick=()=>{
+      if(selectedReason===r){selectedReason=null;b.classList.remove("sel");}
+      else{selectedReason=r;document.querySelectorAll("#reasonChips .reason").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");}
+    };
+    c.appendChild(b);
+  });
+}
+
+/* add sheet */
+function openAdd(){
+  document.getElementById("addUrl").value="";
+  document.getElementById("addTitle").value="";
+  openSheet("sheetAdd");
+  setTimeout(()=>document.getElementById("addUrl").focus(),300);
+}
+function commitAdd(){
+  const url=document.getElementById("addUrl").value.trim();
+  const title=document.getElementById("addTitle").value.trim();
+  if(!url){ toast("Paste a link first","amber"); return; }
+  const platform=detectPlatform(url);
+  const card={id:sid(),platform,url,title:title||autoTitle(platform),author:"",desc:"Pasted reference — open to preview.",img:""};
+  store.feed.unshift(card); save(); closeSheets();
+  // jump to discover
+  switchView("swipe"); renderDeck();
+  toast(`Added a ${PLAT[platform].label} reference`,"green");
+}
+function autoTitle(p){ return ({tiktok:"New TikTok reference",reels:"New Reels reference",shorts:"New Shorts reference"})[p]; }
+
+/* ============================================================= *
+ *  NAV + WIRING
+ * ============================================================= */
+function switchView(v){
+  document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===v));
+  document.getElementById("view-swipe").hidden = v!=="swipe";
+  document.getElementById("view-bank").hidden = v!=="bank";
+  document.getElementById("fab").classList.toggle("show", v==="bank");
+  if(v==="bank")renderBankTabs();
+}
+document.querySelectorAll(".tab").forEach(t=>t.onclick=()=>switchView(t.dataset.view));
+
+document.getElementById("btnLike").onclick=()=>programSwipe(1);
+document.getElementById("btnNope").onclick=()=>programSwipe(-1);
+document.getElementById("btnRewind").onclick=undo;
+document.getElementById("btnOpen").onclick=()=>{
+  const c=store.feed[0]; if(c&&c.url)window.open(c.url,"_blank"); else toast("No link on this card","amber");
+};
+document.getElementById("fab").onclick=openAdd;
+document.getElementById("passSkip").onclick=()=>commitPass(false);
+document.getElementById("passConfirm").onclick=()=>commitPass(true);
+document.getElementById("addCancel").onclick=()=>{pendingKeep=pendingPass=null;closeSheets();};
+document.getElementById("addConfirm").onclick=commitAdd;
+document.getElementById("addUrl").addEventListener("keydown",e=>{if(e.key==="Enter")commitAdd();});
+
+/* keyboard: ← pass, → keep, z undo */
+window.addEventListener("keydown",e=>{
+  if(document.querySelector(".sheet.open"))return;
+  if(document.getElementById("view-swipe").hidden)return;
+  if(e.key==="ArrowRight")programSwipe(1);
+  else if(e.key==="ArrowLeft")programSwipe(-1);
+  else if(e.key.toLowerCase()==="z")undo();
+});
+
+function updateCounts(){
+  document.getElementById("hdrCount").textContent = store.feed.length? `${store.feed.length} to review` : "all clear";
+  const total=Object.values(store.bank).reduce((a,b)=>a+b.length,0);
+  document.getElementById("bankBadge").textContent=total;
+}
+function esc(s){return (s||"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
+
+/* toast */
+let toastT;
+function toast(msg,kind){
+  const el=document.getElementById("toast");
+  document.getElementById("toastMsg").textContent=msg;
+  el.className="toast show"+(kind?` ${kind}`:"");
+  clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("show"),2200);
+}
+
+/* ---------- boot ---------- */
+boot();
+</script>
+</body>
+</html>

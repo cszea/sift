@@ -1,0 +1,19 @@
+# Netlify configuration for REEL·bank
+# Static site (index.html at root) + one serverless function backed by Netlify Blobs.
+
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+[functions]
+  node_bundler = "esbuild"
+
+# Nice-to-have: the function already declares `config.path = "/api/state"`,
+# this redirect is a belt-and-suspenders fallback.
+[[redirects]]
+  from = "/api/state"
+  to = "/.netlify/functions/state"
+  status = 200
