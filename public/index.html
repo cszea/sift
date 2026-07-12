@@ -654,7 +654,9 @@ document.getElementById("userSave").onclick=async()=>{
   try{
     const r=await api("/api/users",{method:"POST",body:JSON.stringify({name,email,password,role:ufRole})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
-    closeSheets(); await loadUsers(); showCreds(email,password);
+    // show instantly (list() is eventually consistent, so don't rely on a refetch)
+    if(d.user && !USERS.some(u=>u.id===d.user.id)) USERS.push(d.user);
+    renderUsers(); closeSheets(); showCreds(email,password);
   }catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
   finally{ btn.disabled=false; btn.textContent="Create login"; }
 };
@@ -675,9 +677,9 @@ document.getElementById("mg_save").onclick=async()=>{
   const newPass=document.getElementById("mg_pass").value.trim();
   const btn=document.getElementById("mg_save"); btn.disabled=true; btn.textContent="Saving…";
   try{
-    if(mgRole!==manageUser.role){ const r=await api("/api/users",{method:"POST",body:JSON.stringify({action:"role",id:manageUser.id,role:mgRole})}); const d=await r.json(); if(!r.ok)throw new Error(d.error); }
-    if(newPass){ if(newPass.length<6)throw new Error("Password must be at least 6 characters"); const r=await api("/api/users",{method:"POST",body:JSON.stringify({action:"password",id:manageUser.id,password:newPass})}); const d=await r.json(); if(!r.ok)throw new Error(d.error); }
-    closeSheets(); await loadUsers(); toast("Saved","green");
+    if(mgRole!==manageUser.role){ const r=await api("/api/users",{method:"POST",body:JSON.stringify({action:"role",id:manageUser.id,email:manageUser.email,role:mgRole})}); const d=await r.json(); if(!r.ok)throw new Error(d.error); const lu=USERS.find(u=>u.id===manageUser.id); if(lu)lu.role=mgRole; }
+    if(newPass){ if(newPass.length<6)throw new Error("Password must be at least 6 characters"); const r=await api("/api/users",{method:"POST",body:JSON.stringify({action:"password",id:manageUser.id,email:manageUser.email,password:newPass})}); const d=await r.json(); if(!r.ok)throw new Error(d.error); }
+    renderUsers(); closeSheets(); toast("Saved","green");
     if(newPass) showCreds(manageUser.email,newPass);
   }catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
   finally{ btn.disabled=false; btn.textContent="Save changes"; }
@@ -685,7 +687,7 @@ document.getElementById("mg_save").onclick=async()=>{
 document.getElementById("mg_delete").onclick=async()=>{
   if(!manageUser)return; if(!confirm(`Delete ${manageUser.name||manageUser.email}? They lose access immediately.`))return;
   const err=document.getElementById("manageErr"); err.classList.remove("show");
-  try{ const r=await api("/api/users",{method:"POST",body:JSON.stringify({action:"delete",id:manageUser.id})}); const d=await r.json(); if(!r.ok)throw new Error(d.error); closeSheets(); await loadUsers(); toast("Login deleted","red"); }
+  try{ const r=await api("/api/users",{method:"POST",body:JSON.stringify({action:"delete",id:manageUser.id,email:manageUser.email})}); const d=await r.json(); if(!r.ok)throw new Error(d.error); USERS=USERS.filter(u=>u.id!==manageUser.id); renderUsers(); closeSheets(); toast("Login deleted","red"); }
   catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
 };
 function showCreds(email,password){ setTimeout(()=>{ window.prompt("Copy these credentials and send them to the person:", `${email}  /  ${password}`); },160); toast("Login ready — copy the credentials","green"); }

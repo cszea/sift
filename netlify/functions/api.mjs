@@ -187,10 +187,14 @@ async function usersRoute(req, store, auth) {
   }
   if (req.method === "POST") {
     const b = await req.json().catch(() => ({}));
-    const byId = async (id) => (await listUsers(store)).find((u) => u.id === id);
+    // Address the target by email (strongly consistent); fall back to an id
+    // scan only if no email was supplied. list() is eventually consistent, so
+    // mutations must not depend on it.
+    const target = async () => b.email ? await getUser(store, b.email)
+      : (await listUsers(store)).find((u) => u.id === b.id);
 
     if (b.action === "delete") {
-      const t = await byId(b.id);
+      const t = await target();
       if (t) {
         if (t.email === auth.email) return json({ error: "You can't delete your own account" }, 400);
         await deleteUser(store, t.email);
@@ -198,7 +202,7 @@ async function usersRoute(req, store, auth) {
       return json({ ok: true });
     }
     if (b.action === "role") {
-      const t = await byId(b.id);
+      const t = await target();
       if (!t) return json({ error: "User not found" }, 404);
       if (t.email === auth.email && b.role !== "admin") return json({ error: "You can't remove your own admin access" }, 400);
       if (!ROLES.includes(b.role)) return json({ error: "Bad role" }, 400);
@@ -206,7 +210,7 @@ async function usersRoute(req, store, auth) {
       return json({ ok: true });
     }
     if (b.action === "password") {
-      const t = await byId(b.id);
+      const t = await target();
       if (!t) return json({ error: "User not found" }, 404);
       if (String(b.password || "").length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
       const { salt, hash } = hashPassword(b.password); t.salt = salt; t.hash = hash;
