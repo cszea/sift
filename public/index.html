@@ -441,7 +441,7 @@ async function loadState(){
   catch(e){ setSync("offline"); }
 }
 async function maybeRefresh(){
-  if(dirty||saving||dragState||document.querySelector(".sheet.open"))return;
+  if(dirty||saving||dragState||document.querySelector(".sheet.open")||document.querySelector(".card.playing")||document.getElementById("lightbox").classList.contains("open"))return;
   try{ const r=await api("/api/state"); if(!r.ok)return; const s=await r.json();
     store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[];
     if(!hidden("view-swipe"))renderDeck(); if(!hidden("view-bank"))renderBankTabs(); updateCounts(); setSync("saved");
