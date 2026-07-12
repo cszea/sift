@@ -11,9 +11,5 @@
 [functions]
   node_bundler = "esbuild"
 
-# Nice-to-have: the function already declares `config.path = "/api/state"`,
-# this redirect is a belt-and-suspenders fallback.
-[[redirects]]
-  from = "/api/state"
-  to = "/.netlify/functions/state"
-  status = 200
+# The api function declares `config.path = "/api/*"` and handles all routes
+# (login, me, state, import, users). No manual redirects needed.
