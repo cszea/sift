@@ -176,12 +176,24 @@ async function stateRoute(req, store, auth) {
   if (req.method === "POST") {
     if (auth.role !== "admin") return json({ error: "Reviewers only" }, 403);
     const b = await req.json().catch(() => ({}));
-    await setState(store, {
+    const incoming = {
       feed: Array.isArray(b.feed) ? b.feed : [],
       bank: b.bank && typeof b.bank === "object" ? b.bank : {},
       passed: Array.isArray(b.passed) ? b.passed : []
-    });
-    return json({ ok: true });
+    };
+    // Non-destructive save: rescue any submissions that landed on the server
+    // after this admin loaded — cards they haven't decided on yet (not in their
+    // feed/bank/passed). Prevents an admin's save from wiping a teammate's fresh
+    // submission under last-write-wins.
+    const known = new Set();
+    incoming.feed.forEach((c) => c && known.add(c.id));
+    incoming.passed.forEach((c) => c && known.add(c.id));
+    Object.values(incoming.bank).forEach((a) => Array.isArray(a) && a.forEach((c) => c && known.add(c.id)));
+    const current = await getState(store);
+    const rescued = (current.feed || []).filter((c) => c && c.id && !known.has(c.id));
+    if (rescued.length) incoming.feed = [...rescued, ...incoming.feed];
+    await setState(store, incoming);
+    return json({ ok: true, rescued: rescued.length });
   }
   return json({ error: "Method not allowed" }, 405);
 }
