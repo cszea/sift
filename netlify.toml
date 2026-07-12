@@ -2,7 +2,7 @@
 # Static site (index.html at root) + one serverless function backed by Netlify Blobs.
 
 [build]
-  publish = "."
+  publish = "public"
   functions = "netlify/functions"
 
 [build.environment]
