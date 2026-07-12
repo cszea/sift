@@ -63,25 +63,33 @@ function verifyToken(token) {
 }
 function rid() { return crypto.randomUUID(); }
 
-/* ------------------------------- storage ------------------------------- */
-async function getUsers(store) { return (await store.get("users", { type: "json" })) || {}; }
-async function setUsers(store, u) { await store.setJSON("users", u); }
+/* ------------------------------- storage -------------------------------
+ * Each user is stored under its own key `user:<email>` so concurrent
+ * account creation never clobbers another (no read-modify-write on a shared
+ * collection). App data (feed/bank/passed) lives in a single `state` blob. */
+const uKey = (email) => "user:" + String(email).toLowerCase().trim();
+async function getUser(store, email) { return await store.get(uKey(email), { type: "json" }); }
+async function putUser(store, u) { await store.setJSON(uKey(u.email), u); }
+async function deleteUser(store, email) { await store.delete(uKey(email)); }
+async function listUsers(store) {
+  const { blobs } = await store.list({ prefix: "user:" });
+  const out = [];
+  for (const b of blobs) { const u = await store.get(b.key, { type: "json" }); if (u) out.push(u); }
+  return out;
+}
 async function getState(store) { return (await store.get("state", { type: "json" })) || SEED; }
 async function setState(store, s) { await store.setJSON("state", s); }
 function publicUser(u) { return { id: u.id, email: u.email, name: u.name, role: u.role, createdAt: u.createdAt }; }
 
-/* Seed the first admin from env vars if the user store is empty. */
+/* Seed the first admin from env vars if it doesn't exist yet (idempotent). */
 async function ensureBootstrap(store) {
-  const users = await getUsers(store);
-  if (Object.keys(users).length) return;
   const email = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
-  if (email && process.env.ADMIN_SALT && process.env.ADMIN_HASH) {
-    users[email] = {
-      id: rid(), email, name: process.env.ADMIN_NAME || "Admin",
-      role: "admin", salt: process.env.ADMIN_SALT, hash: process.env.ADMIN_HASH, createdAt: Date.now()
-    };
-    await setUsers(store, users);
-  }
+  if (!email || !process.env.ADMIN_SALT || !process.env.ADMIN_HASH) return;
+  if (await getUser(store, email)) return;
+  await putUser(store, {
+    id: rid(), email, name: process.env.ADMIN_NAME || "Admin",
+    role: "admin", salt: process.env.ADMIN_SALT, hash: process.env.ADMIN_HASH, createdAt: Date.now()
+  });
 }
 
 /* ------------------------------- routes -------------------------------- */
@@ -121,8 +129,7 @@ function requireAuth(req) {
 async function login(req, store) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   const { email, password } = await req.json().catch(() => ({}));
-  const users = await getUsers(store);
-  const u = users[String(email || "").toLowerCase().trim()];
+  const u = await getUser(store, email || "");
   if (!u || !verifyPassword(password || "", u.salt, u.hash))
     return json({ error: "Invalid email or password" }, 401);
   const token = sign({ sub: u.id, email: u.email, name: u.name, role: u.role, iat: Date.now(), exp: Date.now() + 30 * DAY });
@@ -162,46 +169,48 @@ async function importRoute(req, store, auth) {
 
 async function usersRoute(req, store, auth) {
   if (auth.role !== "admin") return json({ error: "Admins only" }, 403);
-  const users = await getUsers(store);
-  if (req.method === "GET") return json({ users: Object.values(users).map(publicUser).sort((a, b) => a.createdAt - b.createdAt) });
+  if (req.method === "GET") {
+    const users = await listUsers(store);
+    return json({ users: users.map(publicUser).sort((a, b) => a.createdAt - b.createdAt) });
+  }
   if (req.method === "POST") {
     const b = await req.json().catch(() => ({}));
-    const byId = (id) => Object.values(users).find((u) => u.id === id);
+    const byId = async (id) => (await listUsers(store)).find((u) => u.id === id);
 
     if (b.action === "delete") {
-      const t = byId(b.id);
+      const t = await byId(b.id);
       if (t) {
         if (t.email === auth.email) return json({ error: "You can't delete your own account" }, 400);
-        delete users[t.email]; await setUsers(store, users);
+        await deleteUser(store, t.email);
       }
       return json({ ok: true });
     }
     if (b.action === "role") {
-      const t = byId(b.id);
+      const t = await byId(b.id);
       if (!t) return json({ error: "User not found" }, 404);
       if (t.email === auth.email && b.role !== "admin") return json({ error: "You can't remove your own admin access" }, 400);
       if (!ROLES.includes(b.role)) return json({ error: "Bad role" }, 400);
-      t.role = b.role; await setUsers(store, users);
+      t.role = b.role; await putUser(store, t);
       return json({ ok: true });
     }
     if (b.action === "password") {
-      const t = byId(b.id);
+      const t = await byId(b.id);
       if (!t) return json({ error: "User not found" }, 404);
       if (String(b.password || "").length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
       const { salt, hash } = hashPassword(b.password); t.salt = salt; t.hash = hash;
-      await setUsers(store, users);
+      await putUser(store, t);
       return json({ ok: true });
     }
     // create
     const email = String(b.email || "").toLowerCase().trim();
     if (!email || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return json({ error: "Enter a valid email" }, 400);
-    if (users[email]) return json({ error: "That email already has an account" }, 409);
+    if (await getUser(store, email)) return json({ error: "That email already has an account" }, 409);
     if (String(b.password || "").length < 6) return json({ error: "Password must be at least 6 characters" }, 400);
     const role = ROLES.includes(b.role) ? b.role : "viewer";
     const { salt, hash } = hashPassword(b.password);
-    users[email] = { id: rid(), email, name: (b.name || "").trim() || email.split("@")[0], role, salt, hash, createdAt: Date.now() };
-    await setUsers(store, users);
-    return json({ ok: true, user: publicUser(users[email]) });
+    const u = { id: rid(), email, name: (b.name || "").trim() || email.split("@")[0], role, salt, hash, createdAt: Date.now() };
+    await putUser(store, u);
+    return json({ ok: true, user: publicUser(u) });
   }
   return json({ error: "Method not allowed" }, 405);
 }
