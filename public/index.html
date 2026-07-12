@@ -176,6 +176,27 @@
   .fchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--ink-dim);font:600 12.5px/1 var(--font);padding:10px 13px;border-radius:100px;cursor:pointer;transition:.18s}
   .fchip:hover{border-color:var(--line-2);color:var(--ink)}
   .fchip.sel{background:var(--amber);border-color:transparent;color:#160a03}
+  .urgent-tog{display:flex;align-items:center;gap:12px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);border-radius:14px;padding:12px 14px;cursor:pointer;transition:.18s;margin-top:12px}
+  .urgent-tog.on{border-color:var(--red);background:rgba(255,77,94,.08)}
+  .urgent-tog .ue{font-size:20px;flex:none}
+  .urgent-tog .um{flex:1;min-width:0}
+  .urgent-tog .ut{font-size:13.5px;font-weight:700}
+  .urgent-tog .us{font-size:11px;color:var(--ink-faint);margin-top:2px}
+  .urgent-tog .usw{width:42px;height:25px;border-radius:100px;background:rgba(255,255,255,.1);border:1px solid var(--line-2);position:relative;flex:none;transition:.2s}
+  .urgent-tog .usw::after{content:"";position:absolute;top:2px;left:2px;width:19px;height:19px;border-radius:50%;background:var(--ink-dim);transition:.2s}
+  .urgent-tog.on .usw{background:var(--red);border-color:transparent}
+  .urgent-tog.on .usw::after{left:19px;background:#fff}
+  .chip.urgent{background:rgba(255,77,94,.16);border-color:var(--red);color:#ffb3bb}
+  .ubadge{position:absolute;top:9px;left:9px;z-index:3;background:var(--red);color:#fff;font:700 9px/1 var(--mono);letter-spacing:.06em;padding:5px 7px;border-radius:20px}
+  /* leaderboard */
+  #view-leaderboard{overflow-y:auto;padding:14px 20px 40px}
+  .lbrow{display:flex;align-items:center;gap:13px;padding:13px 14px;border:1px solid var(--line);background:linear-gradient(180deg,var(--panel-2),var(--panel));border-radius:14px;margin-bottom:9px}
+  .lbrow.top{border-color:rgba(255,176,102,.4)}
+  .lbrank{width:30px;text-align:center;font:700 16px/1 var(--font);color:var(--ink-dim);flex:none}
+  .lbav{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#160a03;background:linear-gradient(150deg,var(--amber-2),#ff7a34);flex:none}
+  .lbname{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lbcount{font:800 18px/1 var(--font);color:var(--amber-2);flex:none}
+  .lbcount small{font:600 10px/1 var(--mono);color:var(--ink-faint);display:block;text-align:right;margin-top:3px;letter-spacing:.06em}
 
   /* ---------- BANK ---------- */
   #view-bank{overflow-y:auto;padding:14px 20px 40px}
@@ -369,6 +390,7 @@
         <div class="platform-hint"><div class="ph">TikTok</div><div class="ph">Reels</div><div class="ph">Shorts</div></div>
         <div><label class="fl">Title <span style="color:var(--ink-faint)">— optional</span></label><input type="text" id="impTitle" placeholder="What's the concept?" autocomplete="off" style="margin-top:9px"/></div>
         <div><label class="fl">Format</label><div class="fmt-pick" id="impFormats"></div></div>
+        <div class="urgent-tog" id="impUrgent"><span class="ue">🚨</span><div class="um"><div class="ut">Urgent · trend</div><div class="us">Prioritize — time-sensitive</div></div><div class="usw"></div></div>
         <button class="btn primary" id="impSubmit">Submit reference</button>
       </div>
     </div>
@@ -398,6 +420,16 @@
     </div>
     <div class="section-label" id="membersLabel">Members</div>
     <div id="userList"></div>
+  </section>
+
+  <!-- LEADERBOARD (all) -->
+  <section class="view" id="view-leaderboard" hidden>
+    <div class="bank-head"><h2>Leaderboard</h2><span id="lbTotal"></span></div>
+    <div class="seg2" id="lbMode">
+      <button class="active" data-mode="imports">Top importers</button>
+      <button data-mode="sorts">Top sorters</button>
+    </div>
+    <div id="lbList"></div>
   </section>
 
   <button class="fab" id="fab" title="Add">+</button>
@@ -433,6 +465,7 @@
   <input type="text" id="addTitle" placeholder="What's the concept?" autocomplete="off" style="margin-top:9px"/>
   <label class="fl" style="margin-top:16px">Format</label>
   <div class="fmt-pick" id="addFormats" style="margin-top:9px"></div>
+  <div class="urgent-tog" id="addUrgent"><span class="ue">🚨</span><div class="um"><div class="ut">Urgent · trend</div><div class="us">Prioritize — time-sensitive</div></div><div class="usw"></div></div>
   <div class="btn-row"><button class="btn ghost auto" id="addCancel">Cancel</button><button class="btn primary" id="addConfirm">Add to feed</button></div>
 </div>
 
@@ -691,17 +724,20 @@ function buildTabs(){
   if(canImport()) defs.push({v:"import",label:"Submit"});
   defs.push({v:"bank",label:"Bank",badge:"bankBadge"});
   if(isAdmin()) defs.push({v:"team",label:"Team"});
+  defs.push({v:"leaderboard",label:"Leaders"});
   const nav=document.getElementById("tabs"); nav.innerHTML="";
   defs.forEach(d=>{ const b=document.createElement("button"); b.className="tab"; b.dataset.view=d.v; b.innerHTML=d.label+(d.badge?` <span class="badge" id="${d.badge}">0</span>`:""); b.onclick=()=>switchView(d.v); nav.appendChild(b); });
 }
 function switchView(v){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===v));
-  ["swipe","import","bank","team"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==v; });
+  ["swipe","import","bank","team","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==v; });
   document.getElementById("fab").classList.toggle("show", isAdmin() && (v==="swipe"||v==="bank"));
+  if(v!=="swipe")flushSorts();
   if(v==="swipe"){ renderDeck(); maybeRefresh(); }
   else if(v==="bank"){ renderBankTabs(); maybeRefresh(); }
   else if(v==="team")loadUsers();
   else if(v==="import")renderRecent();
+  else if(v==="leaderboard")loadLeaderboard();
 }
 
 /* ============================================================= *
@@ -716,6 +752,7 @@ function paintAutoplay(){ apToggle.classList.toggle("on",autoplay); }
 apToggle.onclick=()=>{ autoplay=!autoplay; localStorage.setItem("sift.autoplay",autoplay?"1":"0"); paintAutoplay(); collapsedCardId=null; renderDeck(); };
 paintAutoplay();
 function renderDeck(){
+  sortFeed();
   deck.innerHTML="";
   const items=store.feed.slice(0,3).reverse();
   if(store.feed.length===0){
@@ -726,7 +763,7 @@ function renderDeck(){
     const isTop=idx===items.length-1, depth=items.length-1-idx;
     const el=document.createElement("div"); el.className="card"; el.dataset.id=card.id;
     const p=PLAT[card.platform]||PLAT.tiktok;
-    const sub = (`${card.format?`<span class="chip">${esc(card.format)}</span>`:""}${card.submittedBy?`<span class="chip">from ${esc(card.submittedBy)}</span>`:""}`) || `<span class="chip">Swipe → keep</span>`;
+    const sub = (`${card.urgent?`<span class="chip urgent">🚨 Urgent</span>`:""}${card.format?`<span class="chip">${esc(card.format)}</span>`:""}${card.submittedBy?`<span class="chip">from ${esc(card.submittedBy)}</span>`:""}`) || `<span class="chip">Swipe → keep</span>`;
     const canPlay = isTop && !!card.url;
     el.innerHTML=`
       <div class="media">${card.img?`<img src="${esc(card.img)}" alt="">`:`<div class="fallback"><div class="glyph">${p.glyph}</div></div>`}</div>
@@ -774,9 +811,9 @@ function programSwipe(dir){
 }
 let pendingKeep=null,pendingPass=null;
 function onKeep(card){ collapsedCardId=null; store.feed=store.feed.filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
-function commitKeep(format){ const card=pendingKeep; if(!card)return; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,savedAt:Date.now()}); store.history.push({type:"keep",card,format}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); }
+function commitKeep(format){ const card=pendingKeep; if(!card)return; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,savedAt:Date.now()}); store.history.push({type:"keep",card,format}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); bumpSort(); }
 function onPass(card){ collapsedCardId=null; store.feed=store.feed.filter(c=>c.id!==card.id); pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); openSheet("sheetPass"); }
-function commitPass(withNote){ const card=pendingPass; if(!card)return; const note=withNote?(selectedReason||document.getElementById("passNote").value.trim()||""):""; store.passed.unshift({...card,reason:note,passedAt:Date.now()}); store.history.push({type:"pass",card}); pendingPass=null; save(); closeSheets(); toast(note?`Passed — “${note}”`:"Passed","red"); updateCounts(); }
+function commitPass(withNote){ const card=pendingPass; if(!card)return; const note=withNote?(selectedReason||document.getElementById("passNote").value.trim()||""):""; store.passed.unshift({...card,reason:note,passedAt:Date.now()}); store.history.push({type:"pass",card}); pendingPass=null; save(); closeSheets(); toast(note?`Passed — “${note}”`:"Passed","red"); updateCounts(); bumpSort(); }
 function undo(){ const last=store.history.pop(); if(!last){toast("Nothing to undo","amber");return;} if(last.type==="keep"){ store.bank[last.format]=(store.bank[last.format]||[]).filter(c=>c.id!==last.card.id); if(store.bank[last.format]&&!store.bank[last.format].length)delete store.bank[last.format]; } else { store.passed=store.passed.filter(c=>c.id!==last.card.id); } store.feed.unshift(last.card); save(); renderDeck(); closeSheets(); toast("Brought it back","amber"); }
 
 /* ============================================================= *
@@ -810,7 +847,7 @@ function renderBankTabs(){
 function bankCard(c){
   const p=PLAT[c.platform]||PLAT.tiktok; const el=document.createElement("div"); el.className="bcard";
   const canRemove = bankMode==="approved" && isAdmin();
-  el.innerHTML=`<div class="media">${c.img?`<img src="${esc(c.img)}">`:`<div class="fallback"><span>${p.glyph}</span></div>`}</div><div class="sc"></div><span class="plat" style="background:${p.color}"></span>${c.url?`<div class="bplay">${PLAY_SVG}</div>`:""}${canRemove?'<div class="del" title="Remove">✕</div>':''}<div class="lbl"><div class="t">${esc(c.title)}</div><div class="p">${esc(c.submittedBy?("by "+c.submittedBy):"")}</div></div>`;
+  el.innerHTML=`<div class="media">${c.img?`<img src="${esc(c.img)}">`:`<div class="fallback"><span>${p.glyph}</span></div>`}</div><div class="sc"></div><span class="plat" style="background:${p.color}"></span>${c.url?`<div class="bplay">${PLAY_SVG}</div>`:""}${canRemove?'<div class="del" title="Remove">✕</div>':''}<div class="lbl"><div class="t">${c.urgent?"🚨 ":""}${esc(c.title)}</div><div class="p">${esc(c.submittedBy?("by "+c.submittedBy):"")}</div></div>`;
   const del=el.querySelector(".del"); if(del)del.onclick=(e)=>{e.stopPropagation();removeFromBank(c);};
   el.onclick=()=>{ if(c.url)openLightbox(c); else toast("No link on this one","amber"); };
   return el;
@@ -835,6 +872,40 @@ function buildFormatPicker(containerId, onPick){
   FORMATS.forEach(f=>{ const b=document.createElement("button"); b.type="button"; b.className="fchip"; b.dataset.name=f.name; b.innerHTML=`<span>${f.icon}</span> ${esc(f.name)}`; b.onclick=()=>{ c.querySelectorAll(".fchip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); onPick(f.name); }; c.appendChild(b); });
 }
 
+/* urgent / trend toggle */
+let impUrgent=false, addUrgent=false;
+document.getElementById("impUrgent").onclick=function(){ impUrgent=!impUrgent; this.classList.toggle("on",impUrgent); };
+document.getElementById("addUrgent").onclick=function(){ addUrgent=!addUrgent; this.classList.toggle("on",addUrgent); };
+function sortFeed(){ store.feed.sort((a,b)=> (((b&&b.urgent)?1:0)-((a&&a.urgent)?1:0)) || (((b&&b.submittedAt)||0)-((a&&a.submittedAt)||0))); }
+
+/* ============================================================= *
+ *  LEADERBOARD
+ * ============================================================= */
+let LEADERS=[], lbMode="imports";
+document.querySelectorAll("#lbMode button").forEach(b=>b.onclick=()=>{ lbMode=b.dataset.mode; document.querySelectorAll("#lbMode button").forEach(x=>x.classList.toggle("active",x===b)); renderLeaderboard(); });
+async function loadLeaderboard(){
+  try{ const r=await api("/api/leaderboard"); if(!r.ok)throw 0; LEADERS=(await r.json()).leaders||[]; renderLeaderboard(); }
+  catch(e){ document.getElementById("lbList").innerHTML=`<div class="empty-note">Couldn't load the leaderboard.</div>`; }
+}
+function renderLeaderboard(){
+  const field=lbMode==="imports"?"imports":"sorts";
+  const rows=[...LEADERS].filter(l=>(l[field]||0)>0).sort((a,b)=>b[field]-a[field]);
+  const totalN=rows.reduce((a,b)=>a+(b[field]||0),0);
+  document.getElementById("lbTotal").textContent=`${totalN} ${lbMode==="imports"?"imported":"sorted"}`;
+  const wrap=document.getElementById("lbList"); wrap.innerHTML="";
+  if(!rows.length){ wrap.innerHTML=`<div class="empty-note">No ${lbMode==="imports"?"imports":"sorting"} yet.<br>${lbMode==="imports"?"Submit videos to climb the board.":"Swipe in Discover to climb the board."}</div>`; return; }
+  rows.forEach((l,i)=>{
+    const medal=i===0?"🥇":i===1?"🥈":i===2?"🥉":`${i+1}`;
+    const el=document.createElement("div"); el.className="lbrow"+(i<3?" top":"");
+    el.innerHTML=`<div class="lbrank">${medal}</div><div class="lbav">${esc((l.name||l.email).slice(0,1).toUpperCase())}</div><div class="lbname">${esc(l.name||l.email)}</div><div class="lbcount">${l[field]}<small>${lbMode==="imports"?"imports":"sorted"}</small></div>`;
+    wrap.appendChild(el);
+  });
+}
+/* record sorting activity (kept/passed) for the leaderboard, debounced */
+let pendingSorts=0, sortFlushT=null;
+function bumpSort(){ pendingSorts++; clearTimeout(sortFlushT); sortFlushT=setTimeout(flushSorts,1500); }
+async function flushSorts(){ if(!pendingSorts||!AUTH.token)return; const n=pendingSorts; pendingSorts=0; clearTimeout(sortFlushT); try{ await api("/api/sorted",{method:"POST",body:JSON.stringify({count:n})}); }catch(e){ pendingSorts+=n; } }
+
 /* ============================================================= *
  *  IMPORT (importer + admin)
  * ============================================================= */
@@ -850,12 +921,13 @@ async function submitImport(){
   if(!impFormat){ err.textContent="Pick a format for this reference."; err.classList.add("show"); return; }
   const btn=document.getElementById("impSubmit"); btn.disabled=true; btn.textContent="Submitting…";
   try{
-    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:impFormat})});
+    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:impFormat,urgent:impUrgent})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
     sessionSubs.unshift(d.card);
     if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card); updateCounts();
     document.getElementById("impUrl").value=""; document.getElementById("impTitle").value="";
     impFormat=null; document.querySelectorAll("#impFormats .fchip").forEach(x=>x.classList.remove("sel"));
+    impUrgent=false; document.getElementById("impUrgent").classList.remove("on");
     renderRecent(); toast(isAdmin()?"Submitted — it's in Discover":"Reference submitted for review","green");
   }catch(ex){ err.textContent=ex.message||"Couldn't submit"; err.classList.add("show"); }
   finally{ btn.disabled=false; btn.textContent="Submit reference"; }
@@ -865,7 +937,7 @@ function renderRecent(){
   if(!sessionSubs.length){ panel.hidden=true; return; }
   panel.hidden=false; list.innerHTML="";
   sessionSubs.forEach(c=>{ const p=PLAT[c.platform]||PLAT.tiktok; const el=document.createElement("div"); el.className="ri";
-    el.innerHTML=`<span class="dotp" style="background:${p.color}"></span><div class="rt"><div class="a">${esc(c.title)}</div><div class="b">${p.label} · sent to review</div></div>`;
+    el.innerHTML=`<span class="dotp" style="background:${c.urgent?"var(--red)":p.color}"></span><div class="rt"><div class="a">${c.urgent?"🚨 ":""}${esc(c.title)}</div><div class="b">${p.label}${c.urgent?" · urgent":""} · ${c.format?esc(c.format)+" · ":""}sent to review</div></div>`;
     list.appendChild(el); });
 }
 
@@ -1032,14 +1104,14 @@ function genPass(){ const all="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2
 /* ============================================================= *
  *  ADD sheet (admin quick-add)
  * ============================================================= */
-function openAdd(){ document.getElementById("addUrl").value=""; document.getElementById("addTitle").value=""; addFormat=null; document.querySelectorAll("#addFormats .fchip").forEach(x=>x.classList.remove("sel")); openSheet("sheetAdd"); setTimeout(()=>document.getElementById("addUrl").focus(),300); }
+function openAdd(){ document.getElementById("addUrl").value=""; document.getElementById("addTitle").value=""; addFormat=null; document.querySelectorAll("#addFormats .fchip").forEach(x=>x.classList.remove("sel")); addUrgent=false; document.getElementById("addUrgent").classList.remove("on"); openSheet("sheetAdd"); setTimeout(()=>document.getElementById("addUrl").focus(),300); }
 async function commitAdd(){
   const url=document.getElementById("addUrl").value.trim(); const title=document.getElementById("addTitle").value.trim();
   if(!/^https?:\/\//i.test(url)){ toast("Paste a valid link","amber"); return; }
   if(!addFormat){ toast("Pick a format","amber"); return; }
   const btn=document.getElementById("addConfirm"); btn.disabled=true; btn.textContent="Adding…";
   try{
-    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:addFormat})}); // resolves short links server-side
+    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:addFormat,urgent:addUrgent})}); // resolves short links server-side
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
     if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card);
     closeSheets(); switchView("swipe"); renderDeck(); toast(`Added a ${PLAT[d.card.platform].label} reference`,"green");

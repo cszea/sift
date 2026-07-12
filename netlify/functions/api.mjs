@@ -92,6 +92,21 @@ async function putInvite(store, i) { await store.setJSON(iKey(i.token), i); }
 async function deleteInvite(store, t) { await store.delete(iKey(t)); }
 const emailOk = (e) => /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e);
 
+/* Per-user leaderboard stats (per-key blob to avoid write races). */
+const sKey = (email) => "stat:" + String(email).toLowerCase().trim();
+async function incStat(store, email, name, field, by) {
+  const k = sKey(email);
+  const cur = (await store.get(k, { type: "json" })) || { email: String(email).toLowerCase().trim(), name: name || "", imports: 0, sorts: 0 };
+  cur[field] = (cur[field] || 0) + by;
+  if (name) cur.name = name;
+  await store.setJSON(k, cur);
+}
+async function listStats(store) {
+  const { blobs } = await store.list({ prefix: "stat:" });
+  const out = []; for (const b of blobs) { const s = await store.get(b.key, { type: "json" }); if (s) out.push(s); }
+  return out;
+}
+
 /* Seed the first admin from env vars if it doesn't exist yet (idempotent). */
 async function ensureBootstrap(store) {
   const email = (process.env.ADMIN_EMAIL || "").toLowerCase().trim();
@@ -128,6 +143,8 @@ export default async (req) => {
     if (path === "/api/import") return await importRoute(req, store, auth);
     if (path === "/api/users") return await usersRoute(req, store, auth);
     if (path === "/api/requests") return await requestsRoute(req, store, auth);
+    if (path === "/api/sorted") return await sortedRoute(req, store, auth);
+    if (path === "/api/leaderboard") return await leaderboardRoute(req, store, auth);
     return json({ error: "Not found" }, 404);
   } catch (e) {
     return json({ error: String((e && e.message) || e) }, 500);
@@ -198,20 +215,21 @@ async function stateRoute(req, store, auth) {
 async function importRoute(req, store, auth) {
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
   if (auth.role !== "admin" && auth.role !== "importer") return json({ error: "Not allowed" }, 403);
-  const { url, title, format } = await req.json().catch(() => ({}));
+  const { url, title, format, urgent } = await req.json().catch(() => ({}));
   if (!url || !/^https?:\/\//i.test(url)) return json({ error: "A valid link is required" }, 400);
   if (!FORMATS.includes(format)) return json({ error: "Pick a format" }, 400);
   const resolved = await resolveUrl(url);
   const s = await getState(store);
   const card = {
     id: rid(), platform: detectPlatform(resolved), url: resolved,
-    originalUrl: resolved !== url ? url : undefined, format,
+    originalUrl: resolved !== url ? url : undefined, format, urgent: !!urgent,
     title: (title || "").trim() || "Imported reference",
     author: "", desc: "Submitted reference — open to preview.", img: "",
     submittedBy: auth.name || auth.email, submittedAt: Date.now()
   };
   s.feed = [card, ...(Array.isArray(s.feed) ? s.feed : [])];
   await setState(store, s);
+  await incStat(store, auth.email, auth.name || auth.email, "imports", 1);
   return json({ ok: true, card });
 }
 
@@ -346,6 +364,21 @@ async function resolveUrl(url) {
     });
     return r.url || url;
   } catch { return url; }
+}
+
+/* --- record that this user sorted (kept/passed) N videos --- */
+async function sortedRoute(req, store, auth) {
+  if (req.method !== "POST") return json({ error: "Method not allowed" }, 405);
+  const b = await req.json().catch(() => ({}));
+  const n = Math.max(0, Math.min(1000, parseInt(b.count, 10) || 0));
+  if (n > 0) await incStat(store, auth.email, auth.name || auth.email, "sorts", n);
+  return json({ ok: true });
+}
+
+/* --- leaderboard (any signed-in user can view) --- */
+async function leaderboardRoute(req, store) {
+  const stats = await listStats(store);
+  return json({ leaders: stats.map((s) => ({ email: s.email, name: s.name || s.email.split("@")[0], imports: s.imports || 0, sorts: s.sorts || 0 })) });
 }
 
 /* ------------------------------- helpers ------------------------------- */
