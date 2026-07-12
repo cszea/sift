@@ -203,9 +203,12 @@ async function importRoute(req, store, auth) {
   if (auth.role !== "admin" && auth.role !== "importer") return json({ error: "Not allowed" }, 403);
   const { url, title } = await req.json().catch(() => ({}));
   if (!url || !/^https?:\/\//i.test(url)) return json({ error: "A valid link is required" }, 400);
+  const resolved = await resolveUrl(url);
   const s = await getState(store);
   const card = {
-    id: rid(), platform: detectPlatform(url), url, title: (title || "").trim() || "Imported reference",
+    id: rid(), platform: detectPlatform(resolved), url: resolved,
+    originalUrl: resolved !== url ? url : undefined,
+    title: (title || "").trim() || "Imported reference",
     author: "", desc: "Submitted reference — open to preview.", img: "",
     submittedBy: auth.name || auth.email, submittedAt: Date.now()
   };
@@ -329,6 +332,22 @@ async function requestsRoute(req, store, auth) {
     return json({ error: "Unknown action" }, 400);
   }
   return json({ error: "Method not allowed" }, 405);
+}
+
+/* Follow redirects on short/share links (vm.tiktok.com, tiktok.com/t/, etc.)
+   to the canonical URL that contains the video id, so it can be embedded. */
+async function resolveUrl(url) {
+  const isShort = /(vm\.tiktok\.com|vt\.tiktok\.com|tiktok\.com\/t\/|\/share\/|instagr\.am)/i.test(url);
+  const tiktokNoId = /tiktok\.com/i.test(url) && !/\/video\/\d+/.test(url);
+  if (!isShort && !tiktokNoId) return url;
+  try {
+    const r = await fetch(url, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(7000),
+      headers: { "user-agent": "Mozilla/5.0 (compatible; SiftBot/1.0)" }
+    });
+    return r.url || url;
+  } catch { return url; }
 }
 
 /* ------------------------------- helpers ------------------------------- */

@@ -686,7 +686,7 @@ function renderDeck(){
     const el=document.createElement("div"); el.className="card"; el.dataset.id=card.id;
     const p=PLAT[card.platform]||PLAT.tiktok;
     const sub = card.submittedBy?`<span class="chip">from ${esc(card.submittedBy)}</span>`:`<span class="chip">Swipe → keep</span>`;
-    const canPlay = isTop && !!embedFor(card.url);
+    const canPlay = isTop && !!card.url;
     el.innerHTML=`
       <div class="media">${card.img?`<img src="${esc(card.img)}" alt="">`:`<div class="fallback"><div class="glyph">${p.glyph}</div></div>`}</div>
       ${canPlay?`<button class="playbtn" title="Play">${PLAY_SVG}</button>`:""}
@@ -757,10 +757,9 @@ function renderBankGrid(){
   grid.innerHTML="";
   cards.forEach(c=>{
     const p=PLAT[c.platform]||PLAT.tiktok; const el=document.createElement("div"); el.className="bcard";
-    const playable=!!embedFor(c.url);
-    el.innerHTML=`<div class="media">${c.img?`<img src="${esc(c.img)}">`:`<div class="fallback"><span>${p.glyph}</span></div>`}</div><div class="sc"></div><span class="plat" style="background:${p.color}"></span>${playable?`<div class="bplay">${PLAY_SVG}</div>`:""}${isAdmin()?'<div class="del" title="Remove">✕</div>':''}<div class="lbl"><div class="t">${esc(c.title)}</div><div class="p">${esc(c.format||"")}</div></div>`;
+    el.innerHTML=`<div class="media">${c.img?`<img src="${esc(c.img)}">`:`<div class="fallback"><span>${p.glyph}</span></div>`}</div><div class="sc"></div><span class="plat" style="background:${p.color}"></span>${c.url?`<div class="bplay">${PLAY_SVG}</div>`:""}${isAdmin()?'<div class="del" title="Remove">✕</div>':''}<div class="lbl"><div class="t">${esc(c.title)}</div><div class="p">${esc(c.format||"")}</div></div>`;
     if(isAdmin()){ const d=el.querySelector(".del"); if(d)d.onclick=(e)=>{e.stopPropagation();removeFromBank(c);}; }
-    el.onclick=()=>{ if(playable)openLightbox(c); else if(c.url)window.open(c.url,"_blank"); else toast("No link on this one","amber"); };
+    el.onclick=()=>{ if(c.url)openLightbox(c); else toast("No link on this one","amber"); };
     grid.appendChild(el);
   });
 }
@@ -962,12 +961,17 @@ function genPass(){ const all="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2
  *  ADD sheet (admin quick-add)
  * ============================================================= */
 function openAdd(){ document.getElementById("addUrl").value=""; document.getElementById("addTitle").value=""; openSheet("sheetAdd"); setTimeout(()=>document.getElementById("addUrl").focus(),300); }
-function commitAdd(){
+async function commitAdd(){
   const url=document.getElementById("addUrl").value.trim(); const title=document.getElementById("addTitle").value.trim();
   if(!/^https?:\/\//i.test(url)){ toast("Paste a valid link","amber"); return; }
-  const platform=detectPlatform(url);
-  const card={id:sid(),platform,url,title:title||autoTitle(platform),author:"",desc:"Added reference — open to preview.",img:""};
-  store.feed.unshift(card); save(); closeSheets(); switchView("swipe"); renderDeck(); toast(`Added a ${PLAT[platform].label} reference`,"green");
+  const btn=document.getElementById("addConfirm"); btn.disabled=true; btn.textContent="Adding…";
+  try{
+    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title})}); // resolves short links server-side
+    const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
+    if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card);
+    closeSheets(); switchView("swipe"); renderDeck(); toast(`Added a ${PLAT[d.card.platform].label} reference`,"green");
+  }catch(e){ toast(e.message||"Couldn't add","amber"); }
+  finally{ btn.disabled=false; btn.textContent="Add to feed"; }
 }
 function autoTitle(p){ return ({tiktok:"New TikTok reference",reels:"New Reels reference",shorts:"New Shorts reference"})[p]; }
 function detectPlatform(url){ const u=url.toLowerCase(); if(u.includes("tiktok"))return"tiktok"; if(u.includes("instagram")||u.includes("/reel"))return"reels"; if(u.includes("youtu"))return"shorts"; return"tiktok"; }
