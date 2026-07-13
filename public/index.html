@@ -198,6 +198,29 @@
   .lbname{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .lbcount{font:800 18px/1 var(--font);color:var(--amber-2);flex:none}
   .lbcount small{font:600 10px/1 var(--mono);color:var(--ink-faint);display:block;text-align:right;margin-top:3px;letter-spacing:.06em}
+  /* analytics */
+  #view-analytics{overflow-y:auto;padding:14px 20px 40px}
+  .ancard{border:1px solid var(--line);background:linear-gradient(180deg,var(--panel-2),var(--panel));border-radius:16px;padding:15px 16px;margin-bottom:12px}
+  .anhead{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+  .anav{width:36px;height:36px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:14px;color:#160a03;background:linear-gradient(150deg,var(--amber-2),#ff7a34);flex:none}
+  .anhead .anm{flex:1;min-width:0}
+  .anhead .ann{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .anhead .ane{font:600 10.5px/1.3 var(--mono);color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .anhead .ansub{text-align:right;flex:none}
+  .anhead .ansub b{font:800 20px/1 var(--font);color:var(--ink)}
+  .anhead .ansub small{display:block;font:600 9px/1 var(--mono);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.08em;margin-top:3px}
+  .anstats{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+  .anstat{text-align:center;border:1px solid var(--line);border-radius:11px;padding:9px 4px}
+  .anstat b{font:800 17px/1 var(--font);display:block}
+  .anstat small{font:600 9px/1 var(--mono);color:var(--ink-faint);text-transform:uppercase;letter-spacing:.06em;display:block;margin-top:5px}
+  .anstat.ok b{color:var(--green)}.anstat.no b{color:var(--red)}.anstat.pend b{color:var(--amber-2)}
+  .anrate{margin-bottom:6px}
+  .anrate .anrlab{display:flex;justify-content:space-between;font:600 11px/1 var(--font);color:var(--ink-dim);margin-bottom:6px}
+  .anrate .anrlab b{color:var(--green);font-size:13px}
+  .anbar{height:8px;border-radius:100px;background:rgba(255,255,255,.08);overflow:hidden}
+  .anbar > i{display:block;height:100%;background:linear-gradient(90deg,var(--green),#2fae5c);border-radius:100px}
+  .anfoot{display:flex;justify-content:space-between;font:600 11px/1 var(--font);color:var(--ink-faint);margin-top:11px}
+  .anfoot b{color:var(--ink-dim)}
   /* submitted list */
   #view-submitted{overflow-y:auto;padding:14px 20px 40px}
   .subrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
@@ -433,6 +456,17 @@
     </div>
     <div class="section-label" id="membersLabel">Members</div>
     <div id="userList"></div>
+  </section>
+
+  <!-- ANALYTICS (admin only) -->
+  <section class="view" id="view-analytics" hidden>
+    <div class="bank-head"><h2>Analytics</h2><span id="anSummary"></span></div>
+    <div class="seg2" id="anRangeSeg">
+      <button class="active" data-range="week">This week</button>
+      <button data-range="month">This month</button>
+      <button data-range="all">All time</button>
+    </div>
+    <div id="anList"></div>
   </section>
 
   <!-- SUBMITTED (importer + admin) -->
@@ -760,6 +794,7 @@ function buildTabs(){
   if(canImport()) defs.push({v:"submitted",label:"Submitted"});
   defs.push({v:"bank",label:"Bank",badge:"bankBadge"});
   if(isAdmin()) defs.push({v:"team",label:"Team"});
+  if(isAdmin()) defs.push({v:"analytics",label:"Analytics"});
   defs.push({v:"leaderboard",label:"Leaders"});
   const nav=document.getElementById("tabs"); nav.innerHTML="";
   defs.forEach(d=>{ const b=document.createElement("button"); b.className="tab"; b.dataset.view=d.v; b.innerHTML=d.label+(d.badge?` <span class="badge" id="${d.badge}">0</span>`:""); b.onclick=()=>switchView(d.v); nav.appendChild(b); });
@@ -767,7 +802,7 @@ function buildTabs(){
 function switchView(v){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===v));
   const viewId = (v==="fyp") ? "swipe" : v; // For You reuses the swipe deck, sourced from recommended
-  ["swipe","import","submitted","bank","team","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==viewId; });
+  ["swipe","import","submitted","bank","team","analytics","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==viewId; });
   currentDeck = (v==="fyp") ? "fyp" : "feed";
   document.getElementById("fab").classList.toggle("show", isAdmin()&&(v==="swipe"||v==="bank"));
   if(v!=="swipe"&&v!=="fyp")flushSorts();
@@ -777,6 +812,7 @@ function switchView(v){
   else if(v==="team")loadUsers();
   else if(v==="import")renderRecent();
   else if(v==="submitted"){ renderSubmitted(); maybeRefresh(); }
+  else if(v==="analytics")loadAnalytics();
   else if(v==="leaderboard")loadLeaderboard();
 }
 
@@ -955,6 +991,52 @@ function renderSubmitted(){
   section("Pending review",pending,"pending","Pending");
   section("Approved",approved,"approved","Approved");
   section("Passed",passed,"passed","Passed");
+}
+
+/* ============================================================= *
+ *  ANALYTICS (admin — per-person submission stats)
+ * ============================================================= */
+let anRange="week";
+document.querySelectorAll("#anRangeSeg button").forEach(b=>b.onclick=()=>{ anRange=b.dataset.range; document.querySelectorAll("#anRangeSeg button").forEach(x=>x.classList.toggle("active",x===b)); renderAnalytics(); });
+async function loadAnalytics(){
+  document.getElementById("anList").innerHTML=`<div class="empty-note">Loading…</div>`;
+  try{ const r=await api("/api/state"); if(r.ok){ const s=await r.json(); store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[]; store.archive=s.archive||{}; store.recommended=s.recommended||[]; } }catch(e){}
+  try{ const r=await api("/api/users"); if(r.ok) USERS=(await r.json()).users||[]; }catch(e){}
+  renderAnalytics();
+}
+function collectSubmissions(){
+  const out=[];
+  const add=(c,status)=>{ if(!c)return; const name=c.submittedBy||""; if(name==="TikTok trending")return; out.push({email:(c.submittedByEmail||"").toLowerCase(),name,when:c.submittedAt||c.savedAt||c.passedAt||0,status}); };
+  (store.feed||[]).forEach(c=>add(c,"pending"));
+  Object.values(store.bank||{}).forEach(a=>a.forEach(c=>add(c,"approved")));
+  Object.values(store.archive||{}).forEach(a=>a.forEach(c=>add(c,"approved")));
+  (store.passed||[]).forEach(c=>add(c,"passed"));
+  return out;
+}
+function renderAnalytics(){
+  const now=Date.now(), DAY=864e5;
+  const cutoff = anRange==="week"?now-7*DAY : anRange==="month"?now-30*DAY : 0;
+  const all=collectSubmissions().filter(s=>!cutoff || s.when>=cutoff);
+  const rows=(USERS||[]).map(u=>{
+    const em=(u.email||"").toLowerCase(), nm=(u.name||"").toLowerCase();
+    const mine=all.filter(s=> (s.email&&s.email===em) || (!s.email&&s.name&&s.name.toLowerCase()===nm) );
+    const submitted=mine.length, approved=mine.filter(s=>s.status==="approved").length, notApproved=mine.filter(s=>s.status==="passed").length, pending=mine.filter(s=>s.status==="pending").length;
+    const decided=approved+notApproved, rate=decided?Math.round(approved/decided*100):0;
+    let days; if(anRange==="week")days=7; else if(anRange==="month")days=30; else { const t=mine.map(s=>s.when).filter(Boolean); days=t.length?Math.max(1,Math.round((now-Math.min(...t))/DAY)):1; }
+    const perDay=(submitted/days); return {name:u.name||u.email,email:u.email,submitted,approved,notApproved,pending,rate,decided,perDay:perDay.toFixed(perDay<10?1:0)};
+  });
+  rows.sort((a,b)=>b.submitted-a.submitted);
+  document.getElementById("anSummary").textContent=`${all.length} submitted · ${anRange==="week"?"7 days":anRange==="month"?"30 days":"all time"}`;
+  const wrap=document.getElementById("anList"); wrap.innerHTML="";
+  if(!rows.some(r=>r.submitted>0)){ wrap.innerHTML=`<div class="empty-note">No submissions in this range yet.</div>`; return; }
+  rows.forEach(r=>{
+    const el=document.createElement("div"); el.className="ancard";
+    el.innerHTML=`<div class="anhead"><div class="anav">${esc((r.name||r.email).slice(0,1).toUpperCase())}</div><div class="anm"><div class="ann">${esc(r.name)}</div><div class="ane">${esc(r.email)}</div></div><div class="ansub"><b>${r.submitted}</b><small>submitted</small></div></div>
+      <div class="anstats"><div class="anstat ok"><b>${r.approved}</b><small>Approved</small></div><div class="anstat no"><b>${r.notApproved}</b><small>Not appr.</small></div><div class="anstat pend"><b>${r.pending}</b><small>Pending</small></div></div>
+      <div class="anrate"><div class="anrlab"><span>Approval rate${r.decided?"":" — no decisions yet"}</span><b>${r.decided?r.rate+"%":"—"}</b></div><div class="anbar"><i style="width:${r.decided?r.rate:0}%"></i></div></div>
+      <div class="anfoot"><span>Avg <b>${r.perDay}</b> videos/day</span><span>${r.decided} decided</span></div>`;
+    wrap.appendChild(el);
+  });
 }
 
 /* ============================================================= *
