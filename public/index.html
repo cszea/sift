@@ -466,6 +466,9 @@
       <button data-range="month">This month</button>
       <button data-range="all">All time</button>
     </div>
+    <div id="anOverall"></div>
+    <div style="display:flex;justify-content:flex-end;margin:0 0 12px"><button class="btn ghost sm" id="anExport">⤓ Export CSV</button></div>
+    <div class="section-label" id="anPeopleLabel">Per person</div>
     <div id="anList"></div>
   </section>
 
@@ -1026,9 +1029,20 @@ function renderAnalytics(){
     const perDay=(submitted/days); return {name:u.name||u.email,email:u.email,submitted,approved,notApproved,pending,rate,decided,perDay:perDay.toFixed(perDay<10?1:0)};
   });
   rows.sort((a,b)=>b.submitted-a.submitted);
-  document.getElementById("anSummary").textContent=`${all.length} submitted · ${anRange==="week"?"7 days":anRange==="month"?"30 days":"all time"}`;
+  window._anRows=rows;
+  const days = anRange==="week"?7 : anRange==="month"?30 : Math.max(1, all.length?Math.round((now-Math.min(...all.map(s=>s.when).filter(Boolean)))/DAY):1);
+  const tSub=all.length, tApp=all.filter(s=>s.status==="approved").length, tNo=all.filter(s=>s.status==="passed").length, tPend=all.filter(s=>s.status==="pending").length;
+  const tDecided=tApp+tNo, tRate=tDecided?Math.round(tApp/tDecided*100):0, tPerDay=(tSub/days).toFixed(tSub/days<10?1:0);
+  const activePeople=rows.filter(r=>r.submitted>0).length;
+  document.getElementById("anSummary").textContent=`${anRange==="week"?"7 days":anRange==="month"?"30 days":"all time"}`;
+  document.getElementById("anOverall").innerHTML = `<div class="ancard">
+    <div class="anhead"><div class="anav" style="background:linear-gradient(150deg,#3fe084,#1fae5c);color:#052913">Σ</div><div class="anm"><div class="ann">Team totals</div><div class="ane">${activePeople} ${activePeople===1?"person":"people"} submitting</div></div><div class="ansub"><b>${tSub}</b><small>submitted</small></div></div>
+    <div class="anstats"><div class="anstat ok"><b>${tApp}</b><small>Approved</small></div><div class="anstat no"><b>${tNo}</b><small>Not appr.</small></div><div class="anstat pend"><b>${tPend}</b><small>Pending</small></div></div>
+    <div class="anrate"><div class="anrlab"><span>Team approval rate${tDecided?"":" — no decisions yet"}</span><b>${tDecided?tRate+"%":"—"}</b></div><div class="anbar"><i style="width:${tDecided?tRate:0}%"></i></div></div>
+    <div class="anfoot"><span>Avg <b>${tPerDay}</b> videos/day</span><span>${tDecided} decided</span></div></div>`;
   const wrap=document.getElementById("anList"); wrap.innerHTML="";
-  if(!rows.some(r=>r.submitted>0)){ wrap.innerHTML=`<div class="empty-note">No submissions in this range yet.</div>`; return; }
+  if(!rows.some(r=>r.submitted>0)){ wrap.innerHTML=`<div class="empty-note">No submissions in this range yet.</div>`; document.getElementById("anPeopleLabel").style.display="none"; return; }
+  document.getElementById("anPeopleLabel").style.display="";
   rows.forEach(r=>{
     const el=document.createElement("div"); el.className="ancard";
     el.innerHTML=`<div class="anhead"><div class="anav">${esc((r.name||r.email).slice(0,1).toUpperCase())}</div><div class="anm"><div class="ann">${esc(r.name)}</div><div class="ane">${esc(r.email)}</div></div><div class="ansub"><b>${r.submitted}</b><small>submitted</small></div></div>
@@ -1038,6 +1052,18 @@ function renderAnalytics(){
     wrap.appendChild(el);
   });
 }
+
+function exportAnalyticsCSV(){
+  const rows=window._anRows||[];
+  const q=v=>{ const s=String(v==null?"":v); return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s; };
+  const head=["Name","Email","Submitted","Approved","Not approved","Pending","Approval rate %","Avg per day","Decided"];
+  const lines=[head.join(",")];
+  rows.forEach(r=>lines.push([q(r.name),q(r.email),r.submitted,r.approved,r.notApproved,r.pending,(r.decided?r.rate:""),r.perDay,r.decided].join(",")));
+  const blob=new Blob([lines.join("\n")],{type:"text/csv;charset=utf-8"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=`sift-analytics-${anRange}.csv`; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  toast("CSV exported","green");
+}
+document.getElementById("anExport").onclick=exportAnalyticsCSV;
 
 /* ============================================================= *
  *  LEADERBOARD
