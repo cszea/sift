@@ -103,8 +103,9 @@
   @keyframes pulse{50%{opacity:.35}}
 
   /* ============================== TABS ============================== */
-  .tabs{display:flex;gap:6px;padding:6px;margin:6px 20px 0;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px}
-  .tab{flex:1;border:0;background:transparent;color:var(--ink-dim);font:600 12.5px/1 var(--font);letter-spacing:.01em;padding:10px 6px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.22s}
+  .tabs{display:flex;gap:6px;padding:6px;margin:6px 20px 0;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:14px;overflow-x:auto;scrollbar-width:none}
+  .tabs::-webkit-scrollbar{display:none}
+  .tab{flex:0 0 auto;white-space:nowrap;border:0;background:transparent;color:var(--ink-dim);font:600 12.5px/1 var(--font);letter-spacing:.01em;padding:10px 13px;border-radius:10px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.22s}
   .tab .badge{font:700 10px/1 var(--mono);background:rgba(255,255,255,.08);color:var(--ink-dim);padding:3px 6px;border-radius:20px}
   .tab.active{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.04));color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
   .tab.active .badge{background:var(--amber);color:#160a03}
@@ -197,6 +198,18 @@
   .lbname{flex:1;min-width:0;font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .lbcount{font:800 18px/1 var(--font);color:var(--amber-2);flex:none}
   .lbcount small{font:600 10px/1 var(--mono);color:var(--ink-faint);display:block;text-align:right;margin-top:3px;letter-spacing:.06em}
+  /* submitted list */
+  #view-submitted{overflow-y:auto;padding:14px 20px 40px}
+  .subrow{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line);cursor:pointer}
+  .subrow:hover .sn{color:var(--amber-2)}
+  .subrow .sdot{width:9px;height:9px;border-radius:50%;flex:none}
+  .subrow .sm{flex:1;min-width:0}
+  .subrow .sn{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .subrow .ss{font:600 11px/1.4 var(--mono);color:var(--ink-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:2px}
+  .sstatus{font:700 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;padding:5px 8px;border-radius:20px;border:1px solid;flex:none}
+  .sstatus.pending{color:var(--amber-2);border-color:rgba(255,176,102,.4);background:rgba(255,138,61,.1)}
+  .sstatus.approved{color:var(--green);border-color:rgba(55,214,122,.4);background:rgba(55,214,122,.1)}
+  .sstatus.passed{color:#ffb3bb;border-color:rgba(255,77,94,.4);background:rgba(255,77,94,.1)}
 
   /* ---------- BANK ---------- */
   #view-bank{overflow-y:auto;padding:14px 20px 40px}
@@ -422,6 +435,12 @@
     <div id="userList"></div>
   </section>
 
+  <!-- SUBMITTED (importer + admin) -->
+  <section class="view" id="view-submitted" hidden>
+    <div class="bank-head"><h2>Submitted</h2><span id="subTotal"></span></div>
+    <div id="subList"></div>
+  </section>
+
   <!-- LEADERBOARD (all) -->
   <section class="view" id="view-leaderboard" hidden>
     <div class="bank-head"><h2>Leaderboard</h2><span id="lbTotal"></span></div>
@@ -456,14 +475,14 @@
 
 <div class="sheet" id="sheetAdd">
   <div class="grabber"></div>
-  <h3>Add a <span class="em">reference</span></h3>
-  <p class="desc">Paste a link from TikTok, Reels, or Shorts. It drops straight into the feed.</p>
+  <h3 id="addSheetTitle">Add a <span class="em">reference</span></h3>
+  <p class="desc">Paste a link from TikTok, Reels, or Shorts.</p>
   <label class="fl">Video link</label>
   <input type="url" id="addUrl" placeholder="https://…" autocomplete="off" style="margin-top:9px"/>
   <div class="platform-hint" style="margin-top:12px"><div class="ph">TikTok</div><div class="ph">Reels</div><div class="ph">Shorts</div></div>
   <label class="fl" style="margin-top:16px">Title <span style="color:var(--ink-faint)">— optional</span></label>
   <input type="text" id="addTitle" placeholder="What's the concept?" autocomplete="off" style="margin-top:9px"/>
-  <label class="fl" style="margin-top:16px">Format</label>
+  <label class="fl" style="margin-top:16px" id="addFormatLabel">Format</label>
   <div class="fmt-pick" id="addFormats" style="margin-top:9px"></div>
   <div class="urgent-tog" id="addUrgent"><span class="ue">🚨</span><div class="um"><div class="ut">Urgent · trend</div><div class="us">Prioritize — time-sensitive</div></div><div class="usw"></div></div>
   <div class="btn-row"><button class="btn ghost auto" id="addCancel">Cancel</button><button class="btn primary" id="addConfirm">Add to feed</button></div>
@@ -584,8 +603,9 @@ function isAdmin(){ return role()==="admin"; }
 function canImport(){ return role()==="admin"||role()==="importer"; }
 
 /* ---------- state ---------- */
-const store = { feed:[], bank:{}, passed:[], archive:{}, history:[] };
-function snapshot(){ return {feed:store.feed,bank:store.bank,passed:store.passed,archive:store.archive}; }
+const store = { feed:[], bank:{}, passed:[], archive:{}, recommended:[], history:[] };
+function snapshot(){ return {feed:store.feed,bank:store.bank,passed:store.passed,archive:store.archive,recommended:store.recommended}; }
+let currentDeck="feed"; // "feed" (Discover) or "recommended" (For You)
 function sid(){ return Math.random().toString(36).slice(2,9); }
 
 let saveTimer=null,saving=false,dirty=false;
@@ -604,14 +624,14 @@ async function pushState(){
 }
 async function loadState(){
   setSync("syncing");
-  try{ const r=await api("/api/state"); if(!r.ok)throw new Error(); const s=await r.json(); store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[]; store.archive=s.archive||{}; setSync("saved"); }
+  try{ const r=await api("/api/state"); if(!r.ok)throw new Error(); const s=await r.json(); store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[]; store.archive=s.archive||{}; store.recommended=s.recommended||[]; setSync("saved"); }
   catch(e){ setSync("offline"); }
 }
 async function maybeRefresh(){
   if(dirty||saving||dragState||document.querySelector(".sheet.open")||document.querySelector(".card.playing")||document.getElementById("lightbox").classList.contains("open"))return;
   try{ const r=await api("/api/state"); if(!r.ok)return; const s=await r.json();
-    store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[]; store.archive=s.archive||{};
-    if(!hidden("view-swipe"))renderDeck(); if(!hidden("view-bank"))renderBankTabs(); updateCounts(); setSync("saved");
+    store.feed=s.feed||[]; store.bank=s.bank||{}; store.passed=s.passed||[]; store.archive=s.archive||{}; store.recommended=s.recommended||[];
+    if(!hidden("view-swipe"))renderDeck(); if(!hidden("view-bank"))renderBankTabs(); if(!hidden("view-submitted"))renderSubmitted(); updateCounts(); setSync("saved");
   }catch(e){}
 }
 document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible"&&AUTH.user) maybeRefresh(); });
@@ -721,7 +741,9 @@ document.getElementById("avatar").addEventListener("click",()=>{ if(confirm("Sig
 function buildTabs(){
   const defs=[];
   if(isAdmin()) defs.push({v:"swipe",label:"Discover"});
+  defs.push({v:"fyp",label:"For You"});
   if(canImport()) defs.push({v:"import",label:"Submit"});
+  if(canImport()) defs.push({v:"submitted",label:"Submitted"});
   defs.push({v:"bank",label:"Bank",badge:"bankBadge"});
   if(isAdmin()) defs.push({v:"team",label:"Team"});
   defs.push({v:"leaderboard",label:"Leaders"});
@@ -730,13 +752,16 @@ function buildTabs(){
 }
 function switchView(v){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===v));
-  ["swipe","import","bank","team","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==v; });
-  document.getElementById("fab").classList.toggle("show", isAdmin() && (v==="swipe"||v==="bank"));
-  if(v!=="swipe")flushSorts();
-  if(v==="swipe"){ renderDeck(); maybeRefresh(); }
+  const viewId = (v==="fyp") ? "swipe" : v; // For You reuses the swipe deck, sourced from recommended
+  ["swipe","import","submitted","bank","team","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==viewId; });
+  currentDeck = (v==="fyp") ? "recommended" : "feed";
+  document.getElementById("fab").classList.toggle("show", (v==="fyp"&&canImport())||(isAdmin()&&(v==="swipe"||v==="bank")));
+  if(v!=="swipe"&&v!=="fyp")flushSorts();
+  if(v==="swipe"||v==="fyp"){ renderDeck(); maybeRefresh(); }
   else if(v==="bank"){ renderBankTabs(); maybeRefresh(); }
   else if(v==="team")loadUsers();
   else if(v==="import")renderRecent();
+  else if(v==="submitted"){ renderSubmitted(); maybeRefresh(); }
   else if(v==="leaderboard")loadLeaderboard();
 }
 
@@ -754,9 +779,13 @@ paintAutoplay();
 function renderDeck(){
   sortFeed();
   deck.innerHTML="";
-  const items=store.feed.slice(0,3).reverse();
-  if(store.feed.length===0){
-    deck.innerHTML=`<div class="empty"><div class="big">🗂️</div><h3>Inbox zero</h3><p>No references left to review. New submissions from your team show up here.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add one yourself</button></div>`;
+  const fyp = currentDeck==="recommended";
+  const items=store[currentDeck].slice(0,3).reverse();
+  if(store[currentDeck].length===0){
+    const msg = fyp
+      ? `<div class="big">✨</div><h3>No recommendations yet</h3><p>Add inspiration TikToks to the For You pool and everyone can swipe them.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add a recommendation</button>`
+      : `<div class="big">🗂️</div><h3>Inbox zero</h3><p>No references left to review. New submissions from your team show up here.</p>${isAdmin()?`<button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add one yourself</button>`:""}`;
+    deck.innerHTML=`<div class="empty">${msg}</div>`;
     updateCounts();return;
   }
   items.forEach((card,idx)=>{
@@ -771,7 +800,7 @@ function renderDeck(){
       <div class="scrim"></div><div class="tint green"></div><div class="tint red"></div>
       <div class="stamp like">KEEP</div><div class="stamp nope">PASS</div>
       <div class="topmeta"><span class="pill ${card.platform}"><span class="dot"></span>${p.label}</span><span class="pill">${esc(card.author||"reference")}</span></div>
-      <div class="info"><div class="kicker">Reference</div><h2>${esc(card.title)}</h2><p>${esc(card.desc||"Tap ▶ to play, or ↗ to open.")}</p><div class="sub">${sub}<span class="chip">← pass</span></div></div>`;
+      <div class="info"><div class="kicker">${fyp?"For you":"Reference"}</div><h2>${esc(card.title)}</h2><p>${esc(card.desc||"Tap ▶ to play, or ↗ to open.")}</p><div class="sub">${sub}<span class="chip">${fyp?"← skip":"← pass"}</span></div></div>`;
     el.style.transform=`translateY(${depth*14}px) scale(${1-depth*0.05})`;
     el.style.opacity=depth>1?0:1; el.style.zIndex=10-depth;
     if(canPlay){ const pb=el.querySelector(".playbtn"); pb.onclick=(e)=>{ e.stopPropagation(); collapsedCardId=null; playInCard(el,card); }; pb.addEventListener("pointerdown",e=>e.stopPropagation()); }
@@ -779,7 +808,7 @@ function renderDeck(){
     deck.appendChild(el);
   });
   // auto-load the top card's video (feed-style) unless it was collapsed
-  if(autoplay){ const top=store.feed[0]; const el=deck.querySelector(".card:last-child"); if(top && el && embedFor(top.url) && collapsedCardId!==top.id && !el.classList.contains("playing")) playInCard(el,top); }
+  if(autoplay){ const top=store[currentDeck][0]; const el=deck.querySelector(".card:last-child"); if(top && el && embedFor(top.url) && collapsedCardId!==top.id && !el.classList.contains("playing")) playInCard(el,top); }
   updateCounts();
 }
 function attachDrag(el,card){
@@ -800,8 +829,8 @@ function applyDrag(){
 function snapBack(){ const {el}=dragState; el.style.transition="transform .35s cubic-bezier(.22,1,.36,1)"; el.style.transform="translateY(0) scale(1)"; el.querySelectorAll(".stamp,.tint").forEach(s=>s.style.opacity=0); const behind=deck.querySelectorAll(".card"); if(behind.length>1){const b=behind[behind.length-2];b.style.transition="transform .35s cubic-bezier(.22,1,.36,1)";b.style.transform="translateY(14px) scale(.95)";} dragState=null; }
 function flyOut(dir){ const {el,card}=dragState; dragState=null; el.style.transition="transform .42s cubic-bezier(.4,0,.2,1),opacity .42s"; el.style.transform=`translate(${(window.innerWidth||520)*1.3*dir}px,-40px) rotate(${dir*22}deg)`; el.style.opacity=0; setTimeout(()=>{ dir>0?onKeep(card):onPass(card); },230); }
 function programSwipe(dir){
-  if(store.feed.length===0)return;
-  const top=deck.querySelector(".card:last-child"); const card=store.feed[0];
+  if(store[currentDeck].length===0)return;
+  const top=deck.querySelector(".card:last-child"); const card=store[currentDeck][0];
   if(!top){ dir>0?onKeep(card):onPass(card); return; }
   top.style.transition="transform .42s cubic-bezier(.4,0,.2,1),opacity .42s";
   const st=top.querySelector(dir>0?".stamp.like":".stamp.nope"),ti=top.querySelector(dir>0?".tint.green":".tint.red");
@@ -809,12 +838,12 @@ function programSwipe(dir){
   top.style.transform=`translate(${(window.innerWidth||520)*1.3*dir}px,-40px) rotate(${dir*22}deg)`; top.style.opacity=0;
   setTimeout(()=>{ dir>0?onKeep(card):onPass(card); },230);
 }
-let pendingKeep=null,pendingPass=null;
-function onKeep(card){ collapsedCardId=null; store.feed=store.feed.filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
-function commitKeep(format){ const card=pendingKeep; if(!card)return; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,savedAt:Date.now()}); store.history.push({type:"keep",card,format}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); bumpSort(); }
-function onPass(card){ collapsedCardId=null; store.feed=store.feed.filter(c=>c.id!==card.id); pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); openSheet("sheetPass"); }
-function commitPass(withNote){ const card=pendingPass; if(!card)return; const note=withNote?(selectedReason||document.getElementById("passNote").value.trim()||""):""; store.passed.unshift({...card,reason:note,passedAt:Date.now()}); store.history.push({type:"pass",card}); pendingPass=null; save(); closeSheets(); toast(note?`Passed — “${note}”`:"Passed","red"); updateCounts(); bumpSort(); }
-function undo(){ const last=store.history.pop(); if(!last){toast("Nothing to undo","amber");return;} if(last.type==="keep"){ store.bank[last.format]=(store.bank[last.format]||[]).filter(c=>c.id!==last.card.id); if(store.bank[last.format]&&!store.bank[last.format].length)delete store.bank[last.format]; } else { store.passed=store.passed.filter(c=>c.id!==last.card.id); } store.feed.unshift(last.card); save(); renderDeck(); closeSheets(); toast("Brought it back","amber"); }
+let pendingKeep=null,pendingPass=null,pendingDeck="feed";
+function onKeep(card){ collapsedCardId=null; pendingDeck=currentDeck; store[currentDeck]=store[currentDeck].filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
+function commitKeep(format){ const card=pendingKeep; if(!card)return; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,savedAt:Date.now()}); store.history.push({type:"keep",card,format,deck:pendingDeck}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); bumpSort(); }
+function onPass(card){ collapsedCardId=null; pendingDeck=currentDeck; store[currentDeck]=store[currentDeck].filter(c=>c.id!==card.id); pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); if(currentDeck==="recommended"){ commitPass(false); } else { openSheet("sheetPass"); } }
+function commitPass(withNote){ const card=pendingPass; if(!card)return; const note=withNote?(selectedReason||document.getElementById("passNote").value.trim()||""):""; store.passed.unshift({...card,reason:note,passedAt:Date.now()}); store.history.push({type:"pass",card,deck:pendingDeck}); pendingPass=null; save(); closeSheets(); toast(note?`Passed — “${note}”`:(pendingDeck==="recommended"?"Skipped":"Passed"),"red"); updateCounts(); bumpSort(); }
+function undo(){ const last=store.history.pop(); if(!last){toast("Nothing to undo","amber");return;} if(last.type==="keep"){ store.bank[last.format]=(store.bank[last.format]||[]).filter(c=>c.id!==last.card.id); if(store.bank[last.format]&&!store.bank[last.format].length)delete store.bank[last.format]; } else { store.passed=store.passed.filter(c=>c.id!==last.card.id); } const d=last.deck||"feed"; store[d].unshift(last.card); save(); renderDeck(); closeSheets(); toast("Brought it back","amber"); }
 
 /* ============================================================= *
  *  BANK
@@ -876,7 +905,33 @@ function buildFormatPicker(containerId, onPick){
 let impUrgent=false, addUrgent=false;
 document.getElementById("impUrgent").onclick=function(){ impUrgent=!impUrgent; this.classList.toggle("on",impUrgent); };
 document.getElementById("addUrgent").onclick=function(){ addUrgent=!addUrgent; this.classList.toggle("on",addUrgent); };
-function sortFeed(){ store.feed.sort((a,b)=> (((b&&b.urgent)?1:0)-((a&&a.urgent)?1:0)) || (((b&&b.submittedAt)||0)-((a&&a.submittedAt)||0))); }
+function sortFeed(){ store[currentDeck].sort((a,b)=> (((b&&b.urgent)?1:0)-((a&&a.urgent)?1:0)) || (((b&&b.submittedAt)||0)-((a&&a.submittedAt)||0))); }
+
+/* ============================================================= *
+ *  SUBMITTED (status of every submission)
+ * ============================================================= */
+function renderSubmitted(){
+  const pending=(store.feed||[]);
+  const approved=[]; Object.entries(store.bank||{}).forEach(([fmt,arr])=>arr.forEach(c=>approved.push({...c,format:c.format||fmt})));
+  Object.values(store.archive||{}).forEach(arr=>arr.forEach(c=>approved.push({...c})));
+  const passed=(store.passed||[]);
+  const total=pending.length+approved.length+passed.length;
+  document.getElementById("subTotal").textContent=`${total} total`;
+  const wrap=document.getElementById("subList"); wrap.innerHTML="";
+  if(!total){ wrap.innerHTML=`<div class="empty-note">No submissions yet. Paste links in the Submit tab to get started.</div>`; return; }
+  const section=(label,cards,cls,status)=>{
+    if(!cards.length)return;
+    const lbl=document.createElement("div"); lbl.className="section-label"; lbl.innerHTML=`${label} <span class="cnt">${cards.length}</span>`; wrap.appendChild(lbl);
+    cards.forEach(c=>{ const p=PLAT[c.platform]||PLAT.tiktok; const el=document.createElement("div"); el.className="subrow";
+      const meta=[c.format?esc(c.format):"", c.submittedBy?("by "+esc(c.submittedBy)):"", c.reason?('“'+esc(c.reason)+'”'):""].filter(Boolean).join(" · ");
+      el.innerHTML=`<span class="sdot" style="background:${c.urgent?'var(--red)':p.color}"></span><div class="sm"><div class="sn">${c.urgent?'🚨 ':''}${esc(c.title)}</div><div class="ss">${meta||p.label}</div></div><span class="sstatus ${cls}">${status}</span>`;
+      el.onclick=()=>{ if(c.url)openLightbox(c); else toast("No link on this one","amber"); };
+      wrap.appendChild(el); });
+  };
+  section("Pending review",pending,"pending","Pending");
+  section("Approved",approved,"approved","Approved");
+  section("Passed",passed,"passed","Passed");
+}
 
 /* ============================================================= *
  *  LEADERBOARD
@@ -1104,19 +1159,25 @@ function genPass(){ const all="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2
 /* ============================================================= *
  *  ADD sheet (admin quick-add)
  * ============================================================= */
-function openAdd(){ document.getElementById("addUrl").value=""; document.getElementById("addTitle").value=""; addFormat=null; document.querySelectorAll("#addFormats .fchip").forEach(x=>x.classList.remove("sel")); addUrgent=false; document.getElementById("addUrgent").classList.remove("on"); openSheet("sheetAdd"); setTimeout(()=>document.getElementById("addUrl").focus(),300); }
+let addTarget="feed";
+function openAdd(){ addTarget = currentDeck==="recommended" ? "recommended" : "feed"; const rec=addTarget==="recommended";
+  document.getElementById("addUrl").value=""; document.getElementById("addTitle").value=""; addFormat=null; document.querySelectorAll("#addFormats .fchip").forEach(x=>x.classList.remove("sel")); addUrgent=false; document.getElementById("addUrgent").classList.remove("on");
+  document.getElementById("addSheetTitle").innerHTML = rec ? `Add to <span class="em">For You</span>` : `Add a <span class="em">reference</span>`;
+  document.getElementById("addFormatLabel").innerHTML = rec ? `Format <span style="color:var(--ink-faint)">— optional</span>` : "Format";
+  document.getElementById("addConfirm").textContent = rec ? "Add to For You" : "Add to feed";
+  openSheet("sheetAdd"); setTimeout(()=>document.getElementById("addUrl").focus(),300); }
 async function commitAdd(){
   const url=document.getElementById("addUrl").value.trim(); const title=document.getElementById("addTitle").value.trim();
   if(!/^https?:\/\//i.test(url)){ toast("Paste a valid link","amber"); return; }
-  if(!addFormat){ toast("Pick a format","amber"); return; }
-  const btn=document.getElementById("addConfirm"); btn.disabled=true; btn.textContent="Adding…";
+  if(addTarget!=="recommended" && !addFormat){ toast("Pick a format","amber"); return; }
+  const btn=document.getElementById("addConfirm"); const label=btn.textContent; btn.disabled=true; btn.textContent="Adding…";
   try{
-    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:addFormat,urgent:addUrgent})}); // resolves short links server-side
+    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:addFormat,urgent:addUrgent,target:addTarget})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
-    if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card);
-    closeSheets(); switchView("swipe"); renderDeck(); toast(`Added a ${PLAT[d.card.platform].label} reference`,"green");
+    if(addTarget==="recommended"){ if(!store.recommended.some(c=>c.id===d.card.id)) store.recommended.unshift(d.card); closeSheets(); switchView("fyp"); toast("Added to For You","green"); }
+    else { if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card); closeSheets(); switchView("swipe"); renderDeck(); toast(`Added a ${PLAT[d.card.platform].label} reference`,"green"); }
   }catch(e){ toast(e.message||"Couldn't add","amber"); }
-  finally{ btn.disabled=false; btn.textContent="Add to feed"; }
+  finally{ btn.disabled=false; btn.textContent=label; }
 }
 function autoTitle(p){ return ({tiktok:"New TikTok reference",reels:"New Reels reference",shorts:"New Shorts reference"})[p]; }
 function detectPlatform(url){ const u=url.toLowerCase(); if(u.includes("tiktok"))return"tiktok"; if(u.includes("instagram")||u.includes("/reel"))return"reels"; if(u.includes("youtu"))return"shorts"; return"tiktok"; }
@@ -1190,7 +1251,7 @@ function buildReasons(){ const c=document.getElementById("reasonChips"); c.inner
 document.getElementById("btnLike").onclick=()=>programSwipe(1);
 document.getElementById("btnNope").onclick=()=>programSwipe(-1);
 document.getElementById("btnRewind").onclick=undo;
-document.getElementById("btnOpen").onclick=()=>{ const c=store.feed[0]; if(c&&c.url)window.open(c.url,"_blank"); else toast("No link on this card","amber"); };
+document.getElementById("btnOpen").onclick=()=>{ const c=store[currentDeck][0]; if(c&&c.url)window.open(c.url,"_blank"); else toast("No link on this card","amber"); };
 document.getElementById("fab").onclick=openAdd;
 document.getElementById("passSkip").onclick=()=>commitPass(false);
 document.getElementById("passConfirm").onclick=()=>commitPass(true);
@@ -1201,7 +1262,7 @@ document.getElementById("lbClose").onclick=closeLightbox;
 document.getElementById("lightbox").addEventListener("click",e=>{ if(e.target.id==="lightbox")closeLightbox(); });
 window.addEventListener("keydown",e=>{
   if(document.getElementById("lightbox").classList.contains("open")){ if(e.key==="Escape")closeLightbox(); return; }
-  if(document.querySelector(".sheet.open"))return; if(hidden("view-swipe")||!isAdmin())return;
+  if(document.querySelector(".sheet.open"))return; if(hidden("view-swipe"))return;
   if(e.key==="ArrowRight")programSwipe(1); else if(e.key==="ArrowLeft")programSwipe(-1); else if(e.key.toLowerCase()==="z")undo();
 });
 
