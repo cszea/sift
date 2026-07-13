@@ -603,9 +603,23 @@ function isAdmin(){ return role()==="admin"; }
 function canImport(){ return role()==="admin"||role()==="importer"; }
 
 /* ---------- state ---------- */
-const store = { feed:[], bank:{}, passed:[], archive:{}, recommended:[], history:[] };
+const store = { feed:[], bank:{}, passed:[], archive:{}, recommended:[], fyp:[], history:[] };
 function snapshot(){ return {feed:store.feed,bank:store.bank,passed:store.passed,archive:store.archive,recommended:store.recommended}; }
-let currentDeck="feed"; // "feed" (Discover) or "recommended" (For You)
+let currentDeck="feed"; // "feed" (Discover) or "fyp" (For You — live trending, client-only)
+let fypLoading=false;
+async function loadTrending(force){
+  if(fypLoading) return;
+  if(!force && store.fyp.length) { renderDeck(); return; }
+  fypLoading=true; renderDeck();
+  try{
+    const r=await api("/api/trending?count=15"); const d=await r.json();
+    // drop ones already kept/passed so you don't re-see them
+    const seen=new Set([...(store.passed||[]).map(c=>c.id), ...Object.values(store.bank||{}).flat().map(c=>c.id)]);
+    store.fyp=(d.cards||[]).filter(c=>!seen.has(c.id));
+    window._fypConfigured=d.configured;
+  }catch(e){ store.fyp=[]; }
+  finally{ fypLoading=false; if(currentDeck==="fyp")renderDeck(); }
+}
 function sid(){ return Math.random().toString(36).slice(2,9); }
 
 let saveTimer=null,saving=false,dirty=false;
@@ -754,10 +768,11 @@ function switchView(v){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===v));
   const viewId = (v==="fyp") ? "swipe" : v; // For You reuses the swipe deck, sourced from recommended
   ["swipe","import","submitted","bank","team","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==viewId; });
-  currentDeck = (v==="fyp") ? "recommended" : "feed";
-  document.getElementById("fab").classList.toggle("show", (v==="fyp"&&canImport())||(isAdmin()&&(v==="swipe"||v==="bank")));
+  currentDeck = (v==="fyp") ? "fyp" : "feed";
+  document.getElementById("fab").classList.toggle("show", isAdmin()&&(v==="swipe"||v==="bank"));
   if(v!=="swipe"&&v!=="fyp")flushSorts();
-  if(v==="swipe"||v==="fyp"){ renderDeck(); maybeRefresh(); }
+  if(v==="swipe"){ renderDeck(); maybeRefresh(); }
+  else if(v==="fyp"){ loadTrending(); }
   else if(v==="bank"){ renderBankTabs(); maybeRefresh(); }
   else if(v==="team")loadUsers();
   else if(v==="import")renderRecent();
@@ -779,12 +794,19 @@ paintAutoplay();
 function renderDeck(){
   sortFeed();
   deck.innerHTML="";
-  const fyp = currentDeck==="recommended";
+  const fyp = currentDeck==="fyp";
   const items=store[currentDeck].slice(0,3).reverse();
   if(store[currentDeck].length===0){
-    const msg = fyp
-      ? `<div class="big">✨</div><h3>No recommendations yet</h3><p>Add inspiration TikToks to the For You pool and everyone can swipe them.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add a recommendation</button>`
-      : `<div class="big">🗂️</div><h3>Inbox zero</h3><p>No references left to review. New submissions from your team show up here.</p>${isAdmin()?`<button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add one yourself</button>`:""}`;
+    let msg;
+    if(fyp){
+      msg = fypLoading
+        ? `<div class="big">✨</div><h3>Loading trending…</h3><p>Pulling fresh TikToks for you.</p>`
+        : (window._fypConfigured===false
+          ? `<div class="big">✨</div><h3>Trending not set up</h3><p>Connect a TikTok data source to auto-fill this feed.</p>`
+          : `<div class="big">✨</div><h3>All caught up</h3><p>You've swiped through this batch of trending TikToks.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="loadTrending(true)">Load fresh trending</button>`);
+    } else {
+      msg = `<div class="big">🗂️</div><h3>Inbox zero</h3><p>No references left to review. New submissions from your team show up here.</p>${isAdmin()?`<button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add one yourself</button>`:""}`;
+    }
     deck.innerHTML=`<div class="empty">${msg}</div>`;
     updateCounts();return;
   }
@@ -841,7 +863,9 @@ function programSwipe(dir){
 let pendingKeep=null,pendingPass=null,pendingDeck="feed";
 function onKeep(card){ collapsedCardId=null; pendingDeck=currentDeck; store[currentDeck]=store[currentDeck].filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
 function commitKeep(format){ const card=pendingKeep; if(!card)return; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,savedAt:Date.now()}); store.history.push({type:"keep",card,format,deck:pendingDeck}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); bumpSort(); }
-function onPass(card){ collapsedCardId=null; pendingDeck=currentDeck; store[currentDeck]=store[currentDeck].filter(c=>c.id!==card.id); pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); if(currentDeck==="recommended"){ commitPass(false); } else { openSheet("sheetPass"); } }
+function onPass(card){ collapsedCardId=null; pendingDeck=currentDeck; store[currentDeck]=store[currentDeck].filter(c=>c.id!==card.id);
+  if(currentDeck==="fyp"){ renderDeck(); return; } // trending skip is ephemeral — nothing saved
+  pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); openSheet("sheetPass"); }
 function commitPass(withNote){ const card=pendingPass; if(!card)return; const note=withNote?(selectedReason||document.getElementById("passNote").value.trim()||""):""; store.passed.unshift({...card,reason:note,passedAt:Date.now()}); store.history.push({type:"pass",card,deck:pendingDeck}); pendingPass=null; save(); closeSheets(); toast(note?`Passed — “${note}”`:(pendingDeck==="recommended"?"Skipped":"Passed"),"red"); updateCounts(); bumpSort(); }
 function undo(){ const last=store.history.pop(); if(!last){toast("Nothing to undo","amber");return;} if(last.type==="keep"){ store.bank[last.format]=(store.bank[last.format]||[]).filter(c=>c.id!==last.card.id); if(store.bank[last.format]&&!store.bank[last.format].length)delete store.bank[last.format]; } else { store.passed=store.passed.filter(c=>c.id!==last.card.id); } const d=last.deck||"feed"; store[d].unshift(last.card); save(); renderDeck(); closeSheets(); toast("Brought it back","amber"); }
 
