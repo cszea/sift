@@ -663,12 +663,12 @@ async function loadFyp(force){
   if(!force && store.fyp.length) { renderDeck(); return; }
   fypLoading=true; renderDeck();
   try{
-    const path = fypSource==="creators" ? "/api/similar" : "/api/trending?count=15";
+    const path = fypSource==="creators" ? "/api/similar" : fypSource==="home" ? "/api/home-feed" : "/api/trending?count=15";
     const r=await api(path); const d=await r.json();
     // drop ones already kept/passed so you don't re-see them
     const seen=new Set([...(store.passed||[]).map(c=>c.id), ...Object.values(store.bank||{}).flat().map(c=>c.id)]);
     store.fyp=(d.cards||[]).filter(c=>!seen.has(c.id));
-    window._fypConfigured=d.configured; window._fypNoCreators=!!d.noCreators;
+    window._fypConfigured=d.configured; window._fypNoCreators=!!d.noCreators; window._fypNeedCookie=!!d.needCookie;
   }catch(e){ store.fyp=[]; }
   finally{ fypLoading=false; if(currentDeck==="fyp")renderDeck(); }
 }
@@ -848,7 +848,13 @@ function paintAutoplay(){ apToggle.classList.toggle("on",autoplay); }
 apToggle.onclick=()=>{ autoplay=!autoplay; localStorage.setItem("sift.autoplay",autoplay?"1":"0"); paintAutoplay(); collapsedCardId=null; renderDeck(); };
 paintAutoplay();
 const fypSrc=document.getElementById("fypSrc");
-fypSrc.onclick=()=>{ fypSource = fypSource==="trending"?"creators":"trending"; fypSrc.textContent = fypSource==="creators"?"👤 Your creators":"🔥 Trending"; fypSrc.classList.toggle("on",fypSource==="creators"); store.fyp=[]; loadFyp(true); };
+const FYP_SOURCES=[{k:"trending",label:"🔥 Trending"},{k:"creators",label:"👤 Your creators"},{k:"home",label:"✨ My FYP"}];
+fypSrc.onclick=()=>{
+  const i=FYP_SOURCES.findIndex(s=>s.k===fypSource);
+  const nxt=FYP_SOURCES[(i+1)%FYP_SOURCES.length];
+  fypSource=nxt.k; fypSrc.textContent=nxt.label; fypSrc.classList.toggle("on",fypSource!=="trending");
+  store.fyp=[]; loadFyp(true);
+};
 function renderDeck(){
   sortFeed();
   deck.innerHTML="";
@@ -857,11 +863,13 @@ function renderDeck(){
   if(store[currentDeck].length===0){
     let msg;
     if(fyp){
-      const creators = fypSource==="creators";
-      if(fypLoading) msg=`<div class="big">✨</div><h3>Loading ${creators?"similar videos":"trending"}…</h3><p>${creators?"Pulling more from your creators' accounts.":"Pulling fresh TikToks for you."}</p>`;
+      const creators = fypSource==="creators", home = fypSource==="home";
+      const what = creators?"similar videos":home?"your For You":"trending";
+      if(fypLoading) msg=`<div class="big">✨</div><h3>Loading ${what}…</h3><p>${creators?"Pulling more from your creators' accounts.":home?"Pulling your personalized feed.":"Pulling fresh TikToks for you."}</p>`;
       else if(window._fypConfigured===false) msg=`<div class="big">✨</div><h3>Not set up</h3><p>Connect a TikTok data source to fill this feed.</p>`;
+      else if(home && window._fypNeedCookie) msg=`<div class="big">🔗</div><h3>Personalized feed not linked</h3><p>Your account's For You isn't connected yet. Ask the admin to link a TikTok account's session.</p>`;
       else if(creators && window._fypNoCreators) msg=`<div class="big">👤</div><h3>No creators yet</h3><p>Submit some TikTok links first — then this pulls more videos from those same accounts.</p>`;
-      else msg=`<div class="big">✨</div><h3>All caught up</h3><p>You've swiped through this batch.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="loadFyp(true)">Load more</button>`;
+      else msg=`<div class="big">✨</div><h3>All caught up</h3><p>You've swiped through this batch of ${what}.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="loadFyp(true)">Load more</button>`;
     } else {
       msg = `<div class="big">🗂️</div><h3>Inbox zero</h3><p>No references left to review. New submissions from your team show up here.</p>${isAdmin()?`<button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add one yourself</button>`:""}`;
     }
