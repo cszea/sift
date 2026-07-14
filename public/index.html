@@ -115,7 +115,7 @@
 
   /* ---------- SWIPE ---------- */
   #view-swipe{display:flex;flex-direction:column}
-  .ap-row{display:flex;justify-content:center;padding:6px 0 0}
+  .ap-row{display:flex;justify-content:center;gap:8px;padding:6px 0 0}
   .ap-toggle{display:inline-flex;align-items:center;gap:8px;font:600 11.5px/1 var(--font);color:var(--ink-dim);background:rgba(255,255,255,.04);border:1px solid var(--line);padding:8px 14px;border-radius:100px;cursor:pointer;transition:.2s}
   .ap-toggle .apd{width:7px;height:7px;border-radius:50%;background:var(--ink-faint);transition:.2s}
   .ap-toggle.on{color:var(--ink)}
@@ -405,7 +405,7 @@
 
   <!-- SWIPE (admin) -->
   <section class="view" id="view-swipe" hidden>
-    <div class="ap-row"><button class="ap-toggle on" id="apToggle" type="button"><span class="apd"></span>Autoplay</button></div>
+    <div class="ap-row"><button class="ap-toggle on" id="apToggle" type="button"><span class="apd"></span>Autoplay</button><button class="ap-toggle" id="fypSrc" type="button" hidden>🔥 Trending</button></div>
     <div class="stage"><div class="deck" id="deck"></div></div>
     <div class="actions">
       <button class="act small rewind" id="btnRewind" title="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4-4M3 8l4 4M3 8h11a7 7 0 0 1 0 14H8"/></svg></button>
@@ -643,20 +643,22 @@ function canImport(){ return role()==="admin"||role()==="importer"; }
 const store = { feed:[], bank:{}, passed:[], archive:{}, recommended:[], fyp:[], history:[] };
 function snapshot(){ return {feed:store.feed,bank:store.bank,passed:store.passed,archive:store.archive,recommended:store.recommended}; }
 let currentDeck="feed"; // "feed" (Discover) or "fyp" (For You — live trending, client-only)
-let fypLoading=false;
-async function loadTrending(force){
+let fypLoading=false, fypSource="trending"; // "trending" | "creators"
+async function loadFyp(force){
   if(fypLoading) return;
   if(!force && store.fyp.length) { renderDeck(); return; }
   fypLoading=true; renderDeck();
   try{
-    const r=await api("/api/trending?count=15"); const d=await r.json();
+    const path = fypSource==="creators" ? "/api/similar" : "/api/trending?count=15";
+    const r=await api(path); const d=await r.json();
     // drop ones already kept/passed so you don't re-see them
     const seen=new Set([...(store.passed||[]).map(c=>c.id), ...Object.values(store.bank||{}).flat().map(c=>c.id)]);
     store.fyp=(d.cards||[]).filter(c=>!seen.has(c.id));
-    window._fypConfigured=d.configured;
+    window._fypConfigured=d.configured; window._fypNoCreators=!!d.noCreators;
   }catch(e){ store.fyp=[]; }
   finally{ fypLoading=false; if(currentDeck==="fyp")renderDeck(); }
 }
+function loadTrending(force){ return loadFyp(force); } // alias used by inline callers
 function sid(){ return Math.random().toString(36).slice(2,9); }
 
 let saveTimer=null,saving=false,dirty=false;
@@ -808,6 +810,7 @@ function switchView(v){
   ["swipe","import","submitted","bank","team","analytics","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==viewId; });
   currentDeck = (v==="fyp") ? "fyp" : "feed";
   document.getElementById("fab").classList.toggle("show", isAdmin()&&(v==="swipe"||v==="bank"));
+  document.getElementById("fypSrc").hidden = v!=="fyp";
   if(v!=="swipe"&&v!=="fyp")flushSorts();
   if(v==="swipe"){ renderDeck(); maybeRefresh(); }
   else if(v==="fyp"){ loadTrending(); }
@@ -830,6 +833,8 @@ const apToggle=document.getElementById("apToggle");
 function paintAutoplay(){ apToggle.classList.toggle("on",autoplay); }
 apToggle.onclick=()=>{ autoplay=!autoplay; localStorage.setItem("sift.autoplay",autoplay?"1":"0"); paintAutoplay(); collapsedCardId=null; renderDeck(); };
 paintAutoplay();
+const fypSrc=document.getElementById("fypSrc");
+fypSrc.onclick=()=>{ fypSource = fypSource==="trending"?"creators":"trending"; fypSrc.textContent = fypSource==="creators"?"👤 Your creators":"🔥 Trending"; fypSrc.classList.toggle("on",fypSource==="creators"); store.fyp=[]; loadFyp(true); };
 function renderDeck(){
   sortFeed();
   deck.innerHTML="";
@@ -838,11 +843,11 @@ function renderDeck(){
   if(store[currentDeck].length===0){
     let msg;
     if(fyp){
-      msg = fypLoading
-        ? `<div class="big">✨</div><h3>Loading trending…</h3><p>Pulling fresh TikToks for you.</p>`
-        : (window._fypConfigured===false
-          ? `<div class="big">✨</div><h3>Trending not set up</h3><p>Connect a TikTok data source to auto-fill this feed.</p>`
-          : `<div class="big">✨</div><h3>All caught up</h3><p>You've swiped through this batch of trending TikToks.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="loadTrending(true)">Load fresh trending</button>`);
+      const creators = fypSource==="creators";
+      if(fypLoading) msg=`<div class="big">✨</div><h3>Loading ${creators?"similar videos":"trending"}…</h3><p>${creators?"Pulling more from your creators' accounts.":"Pulling fresh TikToks for you."}</p>`;
+      else if(window._fypConfigured===false) msg=`<div class="big">✨</div><h3>Not set up</h3><p>Connect a TikTok data source to fill this feed.</p>`;
+      else if(creators && window._fypNoCreators) msg=`<div class="big">👤</div><h3>No creators yet</h3><p>Submit some TikTok links first — then this pulls more videos from those same accounts.</p>`;
+      else msg=`<div class="big">✨</div><h3>All caught up</h3><p>You've swiped through this batch.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="loadFyp(true)">Load more</button>`;
     } else {
       msg = `<div class="big">🗂️</div><h3>Inbox zero</h3><p>No references left to review. New submissions from your team show up here.</p>${isAdmin()?`<button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add one yourself</button>`:""}`;
     }
@@ -1327,13 +1332,13 @@ function embedFor(url){
       if(u.pathname.startsWith("/shorts/")) id=u.pathname.split("/")[2];
       else if(u.pathname==="/watch") id=u.searchParams.get("v");
       else if(u.pathname.startsWith("/embed/")) id=u.pathname.split("/")[2];
-      if(id) return {src:`https://www.youtube.com/embed/${id}?playsinline=1&rel=0`};
+      if(id) return {src:`https://www.youtube.com/embed/${id}?playsinline=1&rel=0&autoplay=1&mute=1`};
     }
-    if(host==="youtu.be"){ const id=u.pathname.slice(1); if(id) return {src:`https://www.youtube.com/embed/${id}?playsinline=1&rel=0`}; }
+    if(host==="youtu.be"){ const id=u.pathname.slice(1); if(id) return {src:`https://www.youtube.com/embed/${id}?playsinline=1&rel=0&autoplay=1&mute=1`}; }
     // TikTok (needs the numeric video id from /video/<id>)
     if(host.endsWith("tiktok.com")){
       const m=u.pathname.match(/\/video\/(\d+)/);
-      if(m) return {src:`https://www.tiktok.com/player/v1/${m[1]}?rel=0&description=0&music_info=0`};
+      if(m) return {src:`https://www.tiktok.com/player/v1/${m[1]}?rel=0&description=0&music_info=0&autoplay=1`};
     }
     // Instagram Reels / posts
     if(host.endsWith("instagram.com")){
