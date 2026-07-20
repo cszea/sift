@@ -109,6 +109,10 @@
   .tab .badge{font:700 10px/1 var(--mono);background:rgba(255,255,255,.08);color:var(--ink-dim);padding:3px 6px;border-radius:20px}
   .tab.active{background:linear-gradient(180deg,rgba(255,255,255,.1),rgba(255,255,255,.04));color:var(--ink);box-shadow:inset 0 1px 0 rgba(255,255,255,.12)}
   .tab.active .badge{background:var(--amber);color:#160a03}
+  .tab .badge.alert,.tab.active .badge.alert{background:var(--red);color:#fff}
+  .label-banner{display:flex;align-items:flex-start;gap:10px;margin:0 0 16px;padding:12px 14px;background:rgba(255,77,94,.1);border:1px solid rgba(255,77,94,.4);border-radius:14px;font-size:12.5px;line-height:1.45;color:#ffc4ca}
+  .label-banner b{color:#fff;font-weight:700}
+  .label-banner .lb-ic{font-size:15px;line-height:1.3}
 
   .view{flex:1;position:relative;overflow:hidden}
   .view[hidden]{display:none!important}
@@ -150,7 +154,12 @@
   .playbtn:hover{background:var(--amber);color:#160a03;border-color:transparent;transform:translate(-50%,-50%) scale(1.07)}
   .playbtn svg{width:28px;height:28px;margin-left:4px}
   .embed-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:#000;z-index:4}
+  .embed-loading{position:absolute;inset:0;z-index:4;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;background:#000;color:var(--ink-dim);font:600 12.5px/1 var(--font)}
+  .embed-loading .spin{width:26px;height:26px;border-radius:50%;border:2.5px solid var(--line-2);border-top-color:var(--amber);animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
   .embed-close{position:absolute;top:14px;right:14px;z-index:7;width:34px;height:34px;border-radius:50%;background:rgba(10,8,6,.72);border:1px solid var(--line-2);color:#fff;display:grid;place-items:center;cursor:pointer;font-size:15px;backdrop-filter:blur(6px)}
+  .embed-open{position:absolute;top:14px;left:14px;z-index:7;height:34px;padding:0 12px;border-radius:100px;background:rgba(10,8,6,.72);border:1px solid var(--line-2);color:#fff;display:inline-flex;align-items:center;gap:4px;cursor:pointer;font:700 11px/1 var(--font);text-decoration:none;backdrop-filter:blur(6px)}
+  .embed-open:hover{background:rgba(10,8,6,.9)}
   .card.playing .scrim,.card.playing .info,.card.playing .playbtn,.card.playing .topmeta{opacity:0;pointer-events:none;transition:opacity .3s}
   .bcard .bplay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:3;width:40px;height:40px;border-radius:50%;background:rgba(10,8,6,.5);border:1px solid rgba(255,255,255,.25);backdrop-filter:blur(6px);color:#fff;display:grid;place-items:center;opacity:0;transition:.2s}
   .bcard:hover .bplay{opacity:1}.bcard .bplay svg{width:16px;height:16px;margin-left:2px}
@@ -177,6 +186,10 @@
   .fchip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);color:var(--ink-dim);font:600 12.5px/1 var(--font);padding:10px 13px;border-radius:100px;cursor:pointer;transition:.18s}
   .fchip:hover{border-color:var(--line-2);color:var(--ink)}
   .fchip.sel{background:var(--amber);border-color:transparent;color:#160a03}
+  .fchip-misc{border-style:dashed;opacity:.9}
+  .fchip-misc.sel{background:var(--line-2);border-color:transparent;color:var(--ink)}
+  .fmt-hint{margin-top:10px;font-size:11.5px;line-height:1.5;color:var(--ink-faint)}
+  .fmt-hint b{color:var(--ink-dim);font-weight:700}
   .urgent-tog{display:flex;align-items:center;gap:12px;border:1px solid var(--line-2);background:rgba(255,255,255,.03);border-radius:14px;padding:12px 14px;cursor:pointer;transition:.18s;margin-top:12px}
   .urgent-tog.on{border-color:var(--red);background:rgba(255,77,94,.08)}
   .urgent-tog .ue{font-size:20px;flex:none}
@@ -233,6 +246,21 @@
   .sstatus.pending{color:var(--amber-2);border-color:rgba(255,176,102,.4);background:rgba(255,138,61,.1)}
   .sstatus.approved{color:var(--green);border-color:rgba(55,214,122,.4);background:rgba(55,214,122,.1)}
   .sstatus.passed{color:#ffb3bb;border-color:rgba(255,77,94,.4);background:rgba(255,77,94,.1)}
+  .sstatus.used{color:#8ecbff;border-color:rgba(96,165,250,.45);background:rgba(96,165,250,.12)}
+  .sub-stats{background:linear-gradient(180deg,var(--panel-2),var(--panel));border:1px solid var(--line-2);border-radius:18px;padding:16px 18px;margin-bottom:20px}
+  .sub-stats .ss-top{display:flex;align-items:center;gap:18px}
+  .sub-stats .ss-hero{display:flex;flex-direction:column;line-height:1}
+  .sub-stats .ss-pct{font:800 34px/1 var(--font);color:var(--green)}
+  .sub-stats .ss-sub{font-size:11.5px;color:var(--ink-dim);margin-top:6px;line-height:1.4}
+  .sub-stats .ss-sub b{color:var(--ink)}
+  .sub-stats .ss-break{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+  .sub-stats .ss-chip{font:600 11px/1 var(--mono);color:var(--ink-dim);background:rgba(255,255,255,.04);border:1px solid var(--line-2);border-radius:20px;padding:7px 10px}
+  .sub-stats .ss-chip b{color:var(--ink);font-weight:800}
+  .sub-stats .ss-chip.used b{color:#8ecbff}
+  .sub-controls{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:16px}
+  #subWho{padding:9px 12px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:11px;color:var(--ink);font-size:13px;font-family:inherit;max-width:200px}
+  .fmt-switch{flex:none;font:700 10px/1 var(--mono);letter-spacing:.06em;color:var(--amber-2);background:rgba(255,138,61,.1);border:1px solid rgba(255,176,102,.4);border-radius:20px;padding:6px 9px;cursor:pointer;margin-right:8px}
+  .fmt-switch:hover{background:rgba(255,138,61,.2)}
 
   /* ---------- BANK ---------- */
   #view-bank{overflow-y:auto;padding:14px 20px 40px}
@@ -313,7 +341,7 @@
   /* ============================== SHEETS ============================== */
   .scrim-bg{position:fixed;inset:0;z-index:40;background:rgba(5,4,3,.68);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:opacity .28s}
   .scrim-bg.open{opacity:1;pointer-events:auto}
-  .sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,102%);z-index:41;width:100%;max-width:520px;background:linear-gradient(180deg,var(--panel-2),var(--panel));border-top-left-radius:26px;border-top-right-radius:26px;border:1px solid var(--line-2);border-bottom:0;padding:10px 22px calc(26px + env(safe-area-inset-bottom));transition:transform .34s cubic-bezier(.22,1,.36,1);box-shadow:0 -30px 80px -20px rgba(0,0,0,.8);max-height:88vh;overflow-y:auto}
+  .sheet{position:fixed;left:50%;bottom:0;transform:translate(-50%,102%);z-index:41;width:100%;max-width:520px;background:linear-gradient(180deg,var(--panel-2),var(--panel));border-top-left-radius:26px;border-top-right-radius:26px;border:1px solid var(--line-2);border-bottom:0;padding:10px 22px calc(26px + env(safe-area-inset-bottom));transition:transform .34s cubic-bezier(.22,1,.36,1);box-shadow:0 -30px 80px -20px rgba(0,0,0,.8);max-height:88vh;max-height:88dvh;overflow-y:auto}
   .sheet.open{transform:translate(-50%,0)}
   .grabber{width:40px;height:4px;border-radius:100px;background:var(--line-2);margin:8px auto 18px}
   .sheet h3{font-size:19px;font-weight:700;margin-bottom:4px}
@@ -329,7 +357,9 @@
   .reason:hover{color:var(--ink);border-color:var(--line-2)}
   .reason.sel{background:var(--red);border-color:transparent;color:#fff}
   .btn-row{display:flex;gap:10px;margin-top:16px}
-  .btn-row .btn{flex:1}.btn-row .btn.auto{flex:0 0 auto;padding-left:22px;padding-right:22px}
+  .btn-row .btn{flex:1}.btn-row .btn.auto{flex:0 0 auto;width:auto;padding-left:22px;padding-right:22px}
+  /* Keep sheet action buttons pinned & visible even when the sheet content is taller than the screen (short windows, zoom, or mobile keyboard open). */
+  .sheet .btn-row{position:sticky;bottom:0;margin-top:16px;padding-top:14px;padding-bottom:6px;background:linear-gradient(180deg,transparent,var(--panel) 30%)}
   .sheet-err{background:rgba(255,77,94,.12);border:1px solid rgba(255,77,94,.35);color:#ffb3bb;font-size:12.5px;padding:11px 14px;border-radius:12px;margin-bottom:14px;display:none}
   .sheet-err.show{display:block}
 
@@ -359,6 +389,24 @@
         <button class="btn primary" type="submit" id="loginBtn">Sign in</button>
       </form>
       <p class="hint">Need access? <a class="link" id="toRequest">Request an invite →</a></p>
+      <p class="hint"><a class="link" id="toForgot">Forgot password?</a></p>
+    </div>
+
+    <!-- forgot password -->
+    <div id="paneForgot" hidden>
+      <h1>Reset password</h1>
+      <p class="sub" id="fgSub">Enter your account email — we'll send a 6-digit code to reset your password.</p>
+      <form id="forgotForm">
+        <div class="err" id="fgErr"></div>
+        <div class="okbox" id="fgOk" hidden></div>
+        <input type="email" id="fgEmail" placeholder="Your account email" autocomplete="email" required />
+        <div id="fgStep2" hidden>
+          <input type="text" id="fgCode" placeholder="6-digit code" inputmode="numeric" autocomplete="one-time-code" />
+          <input type="password" id="fgPass" placeholder="New password (6+ characters)" autocomplete="new-password" />
+        </div>
+        <button class="btn primary" type="submit" id="fgBtn">Send code</button>
+      </form>
+      <p class="hint"><a class="link" id="toSigninFromForgot">← Back to sign in</a></p>
     </div>
 
     <!-- request access -->
@@ -378,7 +426,7 @@
 
     <!-- invite redeem -->
     <div id="paneInvite" hidden>
-      <h1>You're invited 🎉</h1>
+      <h1 id="invHeading">You're invited 🎉</h1>
       <p class="sub" id="invSub">Set a password to finish creating your account.</p>
       <form id="inviteForm">
         <div class="err" id="invErr"></div>
@@ -405,7 +453,7 @@
 
   <!-- SWIPE (admin) -->
   <section class="view" id="view-swipe" hidden>
-    <div class="ap-row"><button class="ap-toggle on" id="apToggle" type="button"><span class="apd"></span>Autoplay</button><button class="ap-toggle" id="fypSrc" type="button" hidden>🔥 Trending</button></div>
+    <div class="ap-row"><button class="ap-toggle on" id="apToggle" type="button"><span class="apd"></span>Autoplay</button></div>
     <div class="stage"><div class="deck" id="deck"></div></div>
     <div class="actions">
       <button class="act small rewind" id="btnRewind" title="Undo"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8l4-4M3 8l4 4M3 8h11a7 7 0 0 1 0 14H8"/></svg></button>
@@ -425,7 +473,11 @@
         <div class="stack">
           <div class="sheet-err" id="bulkErr"></div>
           <textarea id="bulkText" rows="9" placeholder="HAIR TRANS (UGC)&#10;https://www.tiktok.com/@user/video/123…&#10;https://www.tiktok.com/@user/video/456…&#10;&#10;IRL&#10;https://www.tiktok.com/@user/video/789…"></textarea>
-          <div id="bulkAdminOpts" hidden><div class="urgent-tog" id="bulkToBank"><span class="ue">📁</span><div class="um"><div class="ut">Add straight to the bank</div><div class="us">Skip review — for already-approved lists</div></div><div class="usw"></div></div></div>
+          <div id="bulkAdminOpts" hidden>
+            <label class="fl" style="margin-top:4px">Credit these to</label>
+            <select id="bulkCredit" style="width:100%;margin-top:9px;margin-bottom:12px;padding:12px 14px;background:var(--panel-2);border:1px solid var(--line-2);border-radius:12px;color:var(--ink);font-size:14px;font-family:inherit"></select>
+            <div class="urgent-tog" id="bulkToBank"><span class="ue">📁</span><div class="um"><div class="ut">Add straight to the bank</div><div class="us">Skip review — for already-approved lists</div></div><div class="usw"></div></div>
+          </div>
           <button class="btn primary" id="bulkImport">Import list</button>
           <div id="bulkResult"></div>
         </div>
@@ -439,7 +491,7 @@
         <div><label class="fl">Video link</label><input type="url" id="impUrl" placeholder="https://…" autocomplete="off" style="margin-top:9px"/></div>
         <div class="platform-hint"><div class="ph">TikTok</div><div class="ph">Reels</div><div class="ph">Shorts</div></div>
         <div><label class="fl">Title <span style="color:var(--ink-faint)">— optional</span></label><input type="text" id="impTitle" placeholder="What's the concept?" autocomplete="off" style="margin-top:9px"/></div>
-        <div><label class="fl">Format</label><div class="fmt-pick" id="impFormats"></div></div>
+        <div><label class="fl">Format</label><div class="fmt-pick" id="impFormats"></div><div class="fmt-hint">Not sure which one? Pick <b>Miscellaneous</b> — a reviewer files it under the right format, and you'll see what they chose in <b>Submitted</b>.</div></div>
         <div class="urgent-tog" id="impUrgent"><span class="ue">🚨</span><div class="um"><div class="ut">Urgent · trend</div><div class="us">Prioritize — time-sensitive</div></div><div class="usw"></div></div>
         <button class="btn primary" id="impSubmit">Submit reference</button>
       </div>
@@ -489,6 +541,10 @@
   <!-- SUBMITTED (importer + admin) -->
   <section class="view" id="view-submitted" hidden>
     <div class="bank-head"><h2>Submitted</h2><span id="subTotal"></span></div>
+    <div class="sub-controls">
+      <select id="subWho" hidden></select>
+      <div class="seg2" id="subViewSeg"><button class="active" data-v="status">By status</button><button data-v="day">By day</button></div>
+    </div>
     <div id="subList"></div>
   </section>
 
@@ -515,10 +571,18 @@
   <div class="fmt-grid" id="fmtGrid"></div>
 </div>
 
+<div class="sheet" id="sheetFmtSwitch">
+  <div class="grabber"></div>
+  <h3>Change <span class="em">format</span></h3>
+  <p class="desc">Fix the format on this submission while it's still awaiting review.</p>
+  <div class="fmt-pick" id="fmtSwitchGrid" style="margin-top:4px"></div>
+  <div class="btn-row"><button class="btn ghost auto" id="fmtSwitchCancel">Cancel</button></div>
+</div>
+
 <div class="sheet" id="sheetPass">
   <div class="grabber"></div>
   <h3>Passed. <span class="em">Why? <small style="color:var(--ink-faint);font-weight:600;font-size:12px">(optional)</small></span></h3>
-  <p class="desc">A quick note goes back to whoever submitted it. Skip if you're moving fast.</p>
+  <p class="desc">Pick any reasons that apply and add a note — it goes back to whoever submitted it. Skip if you're moving fast.</p>
   <div class="reasons" id="reasonChips"></div>
   <textarea id="passNote" rows="2" placeholder="Add a short note…"></textarea>
   <div class="btn-row"><button class="btn ghost auto" id="passSkip">Skip</button><button class="btn danger" id="passConfirm">Save pass</button></div>
@@ -535,6 +599,7 @@
   <input type="text" id="addTitle" placeholder="What's the concept?" autocomplete="off" style="margin-top:9px"/>
   <label class="fl" style="margin-top:16px" id="addFormatLabel">Format</label>
   <div class="fmt-pick" id="addFormats" style="margin-top:9px"></div>
+  <div class="fmt-hint" id="addFmtHint">Not sure? Pick <b>Miscellaneous</b> — the reviewer sorts it and you'll see the format in <b>Submitted</b>.</div>
   <div class="urgent-tog" id="addUrgent"><span class="ue">🚨</span><div class="um"><div class="ut">Urgent · trend</div><div class="us">Prioritize — time-sensitive</div></div><div class="usw"></div></div>
   <div class="btn-row"><button class="btn ghost auto" id="addCancel">Cancel</button><button class="btn primary" id="addConfirm">Add to feed</button></div>
 </div>
@@ -629,10 +694,13 @@ const FORMATS = [
   {name:"Hair transformations",icon:"💇",note:"Before / after"},
   {name:"High-effort UGC",icon:"🎬",note:"Produced, high production"},
   {name:"IRL",icon:"🌆",note:"In real life"},
-  {name:"UGC shoots",icon:"📸",note:"Shoot content"},
+  {name:"Shoots",icon:"📸",note:"Shoot content"},
   {name:"Yaps",icon:"🎙️",note:"Talking to cam"},
+  {name:"Voice-over",icon:"🎧",note:"Voiceover / narration"},
 ];
-const REASONS = ["Off-brand","Overdone","Low quality","Wrong format","Not our vibe","Already have it"];
+const MISC = "Miscellaneous";
+const MISC_OPT = {name:MISC,icon:"🤷",note:"Not sure — reviewer picks"};
+const REASONS = ["Off-brand","Overdone","Low quality","Wrong format","Not our vibe","Already have it","Repeat / done before"];
 const PLAT = {tiktok:{label:"TikTok",color:"#25f4ee",glyph:"🎵"},reels:{label:"Reels",color:"#ff2d78",glyph:"📸"},shorts:{label:"Shorts",color:"#ff2b2b",glyph:"▶️"}};
 
 /* ---------- auth ---------- */
@@ -654,25 +722,9 @@ function isAdmin(){ return role()==="admin"; }
 function canImport(){ return role()==="admin"||role()==="importer"; }
 
 /* ---------- state ---------- */
-const store = { feed:[], bank:{}, passed:[], archive:{}, recommended:[], fyp:[], history:[] };
+const store = { feed:[], bank:{}, passed:[], archive:{}, recommended:[], history:[] };
 function snapshot(){ return {feed:store.feed,bank:store.bank,passed:store.passed,archive:store.archive,recommended:store.recommended}; }
-let currentDeck="feed"; // "feed" (Discover) or "fyp" (For You — live trending, client-only)
-let fypLoading=false, fypSource="trending"; // "trending" | "creators"
-async function loadFyp(force){
-  if(fypLoading) return;
-  if(!force && store.fyp.length) { renderDeck(); return; }
-  fypLoading=true; renderDeck();
-  try{
-    const path = fypSource==="creators" ? "/api/similar" : fypSource==="home" ? "/api/home-feed" : "/api/trending?count=15";
-    const r=await api(path); const d=await r.json();
-    // drop ones already kept/passed so you don't re-see them
-    const seen=new Set([...(store.passed||[]).map(c=>c.id), ...Object.values(store.bank||{}).flat().map(c=>c.id)]);
-    store.fyp=(d.cards||[]).filter(c=>!seen.has(c.id));
-    window._fypConfigured=d.configured; window._fypNoCreators=!!d.noCreators; window._fypNeedCookie=!!d.needCookie;
-  }catch(e){ store.fyp=[]; }
-  finally{ fypLoading=false; if(currentDeck==="fyp")renderDeck(); }
-}
-function loadTrending(force){ return loadFyp(force); } // alias used by inline callers
+let currentDeck="feed"; // Discover swipe deck
 function sid(){ return Math.random().toString(36).slice(2,9); }
 
 let saveTimer=null,saving=false,dirty=false;
@@ -725,11 +777,49 @@ function getInviteToken(){
   const q=new URLSearchParams(location.search).get("invite"); return q||null;
 }
 function showLogin(){ document.getElementById("gate").hidden=false; document.getElementById("mainApp").hidden=true; showPane("Signin"); }
-function showPane(name){ ["Signin","Request","Invite"].forEach(p=>{ const el=document.getElementById("pane"+p); if(el)el.hidden = p!==name; }); }
+function showPane(name){ ["Signin","Request","Invite","Forgot"].forEach(p=>{ const el=document.getElementById("pane"+p); if(el)el.hidden = p!==name; }); }
 
 /* ---- request access ---- */
 document.getElementById("toRequest").onclick=()=>{ document.getElementById("reqErr").classList.remove("show"); document.getElementById("reqOk").classList.remove("show"); showPane("Request"); };
 document.getElementById("toSignin").onclick=()=>showPane("Signin");
+/* forgot password → email a reset code */
+let fgStage="request";
+function resetForgot(){ fgStage="request"; document.getElementById("fgStep2").hidden=true; document.getElementById("fgOk").hidden=true; document.getElementById("fgErr").classList.remove("show"); document.getElementById("fgBtn").textContent="Send code"; document.getElementById("fgCode").value=""; document.getElementById("fgPass").value=""; }
+document.getElementById("toForgot").onclick=()=>{ resetForgot(); document.getElementById("fgEmail").value=document.getElementById("loginEmail").value.trim(); showPane("Forgot"); };
+document.getElementById("toSigninFromForgot").onclick=()=>showPane("Signin");
+document.getElementById("forgotForm").addEventListener("submit",async(e)=>{
+  e.preventDefault();
+  const err=document.getElementById("fgErr"), ok=document.getElementById("fgOk"), btn=document.getElementById("fgBtn");
+  err.classList.remove("show");
+  const email=document.getElementById("fgEmail").value.trim().toLowerCase();
+  if(fgStage==="request"){
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent="Enter a valid email."; err.classList.add("show"); return; }
+    btn.disabled=true; btn.textContent="Sending…";
+    try{
+      const r=await fetch("/api/forgot-password",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email})});
+      const d=await r.json(); if(!r.ok)throw new Error(d.error||"Couldn't send code");
+      if(d.emailNotConfigured){ err.textContent="Password-reset email isn't set up yet — ask an admin for a reset link."; err.classList.add("show"); btn.disabled=false; btn.textContent="Send code"; return; }
+      ok.textContent="If that email has an account, a 6-digit code is on its way. Enter it below with a new password."; ok.hidden=false;
+      document.getElementById("fgStep2").hidden=false; document.getElementById("fgEmail").readOnly=true; document.getElementById("fgEmail").style.opacity=".7";
+      fgStage="verify"; btn.textContent="Reset password & sign in";
+    }catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
+    finally{ btn.disabled=false; if(fgStage==="request")btn.textContent="Send code"; }
+  } else {
+    const code=document.getElementById("fgCode").value.trim();
+    const password=document.getElementById("fgPass").value;
+    if(!code){ err.textContent="Enter the code from your email."; err.classList.add("show"); return; }
+    if(password.length<6){ err.textContent="New password must be at least 6 characters."; err.classList.add("show"); return; }
+    btn.disabled=true; btn.textContent="Resetting…";
+    try{
+      const r=await fetch("/api/reset-code",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({email,code,password})});
+      const d=await r.json(); if(!r.ok)throw new Error(d.error||"Couldn't reset");
+      AUTH.token=d.token; AUTH.user=d.user; saveToken(d.token,true);
+      document.getElementById("fgEmail").readOnly=false;
+      enterApp();
+    }catch(ex){ err.textContent=ex.message; err.classList.add("show"); }
+    finally{ btn.disabled=false; if(fgStage==="verify")btn.textContent="Reset password & sign in"; }
+  }
+});
 document.getElementById("requestForm").addEventListener("submit",async(e)=>{
   e.preventDefault();
   const email=document.getElementById("reqEmail").value.trim();
@@ -755,19 +845,38 @@ async function showInvite(token){
     const r=await fetch("/api/invite?token="+encodeURIComponent(token));
     const d=await r.json();
     if(!r.ok||!d.valid){ document.getElementById("invSub").textContent="This invite is invalid or already used. Ask the admin for a new one."; document.getElementById("inviteForm").style.display="none"; return; }
-    document.getElementById("invEmail").value=d.email;
+    const em=document.getElementById("invEmail");
+    em.value=d.email||"";
     document.getElementById("invName").value=d.name||"";
-    document.getElementById("invSub").textContent=`Set a password to join as ${d.role}.`;
+    window._inviteOpen=!!d.open;
+    if(d.reset){
+      document.getElementById("invHeading").textContent="Reset your password 🔑";
+      document.getElementById("invSub").textContent="Choose a new password for your account.";
+      document.getElementById("invBtn").textContent="Reset password & sign in";
+      em.readOnly=true; em.style.opacity=".7";
+    } else if(d.open){
+      // shareable link — the person enters their own email
+      document.getElementById("invHeading").textContent=`Join as ${d.role} 🔑`;
+      document.getElementById("invSub").textContent=`You've got ${d.role==="admin"?"an admin":"a "+d.role} invite. Enter your email and set a password.`;
+      em.readOnly=false; em.style.opacity="1"; em.placeholder="Your email"; em.required=true;
+      document.getElementById("invBtn").textContent="Create account & sign in";
+    } else {
+      document.getElementById("invSub").textContent=`Set a password to join as ${d.role}.`;
+      em.readOnly=true; em.style.opacity=".7";
+    }
   }catch(e){ document.getElementById("invSub").textContent="Couldn't load this invite. Check your connection."; }
 }
 document.getElementById("inviteForm").addEventListener("submit",async(e)=>{
   e.preventDefault();
   const password=document.getElementById("invPass").value;
   const name=document.getElementById("invName").value.trim();
+  const email=document.getElementById("invEmail").value.trim();
   const err=document.getElementById("invErr"), btn=document.getElementById("invBtn");
-  err.classList.remove("show"); btn.disabled=true; btn.textContent="Creating…";
+  err.classList.remove("show");
+  if(window._inviteOpen && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ err.textContent="Enter a valid email."; err.classList.add("show"); return; }
+  btn.disabled=true; btn.textContent="Creating…";
   try{
-    const r=await fetch("/api/invite-accept",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:window._inviteToken,password,name})});
+    const r=await fetch("/api/invite-accept",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:window._inviteToken,password,name,email})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Couldn't create account");
     AUTH.token=d.token; AUTH.user=d.user; saveToken(d.token, true);
     history.replaceState(null,"",location.pathname); // strip invite token from URL
@@ -808,9 +917,8 @@ document.getElementById("avatar").addEventListener("click",()=>{ if(confirm("Sig
 function buildTabs(){
   const defs=[];
   if(isAdmin()) defs.push({v:"swipe",label:"Discover"});
-  defs.push({v:"fyp",label:"For You"});
   if(canImport()) defs.push({v:"import",label:"Submit"});
-  if(canImport()) defs.push({v:"submitted",label:"Submitted"});
+  if(canImport()) defs.push({v:"submitted",label:"Submitted",badge:"subBadge"});
   defs.push({v:"bank",label:"Bank",badge:"bankBadge"});
   if(isAdmin()) defs.push({v:"team",label:"Team"});
   if(isAdmin()) defs.push({v:"analytics",label:"Analytics"});
@@ -820,18 +928,15 @@ function buildTabs(){
 }
 function switchView(v){
   document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active",t.dataset.view===v));
-  const viewId = (v==="fyp") ? "swipe" : v; // For You reuses the swipe deck, sourced from recommended
-  ["swipe","import","submitted","bank","team","analytics","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==viewId; });
-  currentDeck = (v==="fyp") ? "fyp" : "feed";
+  ["swipe","import","submitted","bank","team","analytics","leaderboard"].forEach(id=>{ const el=document.getElementById("view-"+id); if(el) el.hidden = id!==v; });
+  currentDeck = "feed";
   document.getElementById("fab").classList.toggle("show", isAdmin()&&(v==="swipe"||v==="bank"));
-  document.getElementById("fypSrc").hidden = v!=="fyp";
-  if(v!=="swipe"&&v!=="fyp")flushSorts();
+  if(v!=="swipe")flushSorts();
   if(v==="swipe"){ renderDeck(); maybeRefresh(); }
-  else if(v==="fyp"){ loadTrending(); }
   else if(v==="bank"){ renderBankTabs(); maybeRefresh(); }
   else if(v==="team")loadUsers();
   else if(v==="import")renderRecent();
-  else if(v==="submitted"){ renderSubmitted(); maybeRefresh(); }
+  else if(v==="submitted"){ renderSubmitted(); maybeRefresh(); if(isAdmin()&&!USERS.length){ loadUsers().then(()=>{ if(!hidden("view-submitted")) renderSubmitted(); }); } }
   else if(v==="analytics")loadAnalytics();
   else if(v==="leaderboard")loadLeaderboard();
 }
@@ -842,37 +947,20 @@ function switchView(v){
 const deck=document.getElementById("deck");
 let dragState=null;
 let autoplay=(localStorage.getItem("sift.autoplay")??"1")==="1";
+let autoplayTimer=null;
 let collapsedCardId=null;
 const apToggle=document.getElementById("apToggle");
 function paintAutoplay(){ apToggle.classList.toggle("on",autoplay); }
 apToggle.onclick=()=>{ autoplay=!autoplay; localStorage.setItem("sift.autoplay",autoplay?"1":"0"); paintAutoplay(); collapsedCardId=null; renderDeck(); };
 paintAutoplay();
-const fypSrc=document.getElementById("fypSrc");
-const FYP_SOURCES=[{k:"trending",label:"🔥 Trending"},{k:"creators",label:"👤 Your creators"},{k:"home",label:"✨ My FYP"}];
-fypSrc.onclick=()=>{
-  const i=FYP_SOURCES.findIndex(s=>s.k===fypSource);
-  const nxt=FYP_SOURCES[(i+1)%FYP_SOURCES.length];
-  fypSource=nxt.k; fypSrc.textContent=nxt.label; fypSrc.classList.toggle("on",fypSource!=="trending");
-  store.fyp=[]; loadFyp(true);
-};
 function renderDeck(){
   sortFeed();
   deck.innerHTML="";
-  const fyp = currentDeck==="fyp";
   const items=store[currentDeck].slice(0,3).reverse();
+  // give the next few cards a real thumbnail + caption (so throttled embeds still show something useful)
+  store[currentDeck].slice(0,4).forEach(enrichThumb);
   if(store[currentDeck].length===0){
-    let msg;
-    if(fyp){
-      const creators = fypSource==="creators", home = fypSource==="home";
-      const what = creators?"similar videos":home?"your For You":"trending";
-      if(fypLoading) msg=`<div class="big">✨</div><h3>Loading ${what}…</h3><p>${creators?"Pulling more from your creators' accounts.":home?"Pulling your personalized feed.":"Pulling fresh TikToks for you."}</p>`;
-      else if(window._fypConfigured===false) msg=`<div class="big">✨</div><h3>Not set up</h3><p>Connect a TikTok data source to fill this feed.</p>`;
-      else if(home && window._fypNeedCookie) msg=`<div class="big">🔗</div><h3>Personalized feed not linked</h3><p>Your account's For You isn't connected yet. Ask the admin to link a TikTok account's session.</p>`;
-      else if(creators && window._fypNoCreators) msg=`<div class="big">👤</div><h3>No creators yet</h3><p>Submit some TikTok links first — then this pulls more videos from those same accounts.</p>`;
-      else msg=`<div class="big">✨</div><h3>All caught up</h3><p>You've swiped through this batch of ${what}.</p><button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="loadFyp(true)">Load more</button>`;
-    } else {
-      msg = `<div class="big">🗂️</div><h3>Inbox zero</h3><p>No references left to review. New submissions from your team show up here.</p>${isAdmin()?`<button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add one yourself</button>`:""}`;
-    }
+    const msg = `<div class="big">🗂️</div><h3>Inbox zero</h3><p>No references left to review. New submissions from your team show up here.</p>${isAdmin()?`<button class="btn primary" style="margin-top:6px;padding:13px 22px;width:auto" onclick="openAdd()">Add one yourself</button>`:""}`;
     deck.innerHTML=`<div class="empty">${msg}</div>`;
     updateCounts();return;
   }
@@ -882,13 +970,14 @@ function renderDeck(){
     const p=PLAT[card.platform]||PLAT.tiktok;
     const sub = (`${card.urgent?`<span class="chip urgent">🚨 Urgent</span>`:""}${card.format?`<span class="chip">${esc(card.format)}</span>`:""}${card.submittedBy?`<span class="chip">from ${esc(card.submittedBy)}</span>`:""}`) || `<span class="chip">Swipe → keep</span>`;
     const canPlay = isTop && !!card.url;
+    const thumb=thumbFor(card), ttl=titleFor(card)||card.title;
     el.innerHTML=`
-      <div class="media">${card.img?`<img src="${esc(card.img)}" alt="">`:`<div class="fallback"><div class="glyph">${p.glyph}</div></div>`}</div>
+      <div class="media">${thumb?`<img src="${esc(thumb)}" alt="" onerror="this.style.display='none'">`:`<div class="fallback"><div class="glyph">${p.glyph}</div></div>`}</div>
       ${canPlay?`<button class="playbtn" title="Play">${PLAY_SVG}</button>`:""}
       <div class="scrim"></div><div class="tint green"></div><div class="tint red"></div>
       <div class="stamp like">KEEP</div><div class="stamp nope">PASS</div>
       <div class="topmeta"><span class="pill ${card.platform}"><span class="dot"></span>${p.label}</span><span class="pill">${esc(card.author||"reference")}</span></div>
-      <div class="info"><div class="kicker">${fyp?"For you":"Reference"}</div><h2>${esc(card.title)}</h2><p>${esc(card.desc||"Tap ▶ to play, or ↗ to open.")}</p><div class="sub">${sub}<span class="chip">${fyp?"← skip":"← pass"}</span></div></div>`;
+      <div class="info"><div class="kicker">Reference</div><h2>${esc(ttl)}</h2><p>${esc(card.desc||"Tap ▶ to play, or ↗ to open.")}</p><div class="sub">${sub}<span class="chip">← pass</span></div></div>`;
     el.style.transform=`translateY(${depth*14}px) scale(${1-depth*0.05})`;
     el.style.opacity=depth>1?0:1; el.style.zIndex=10-depth;
     if(canPlay){ const pb=el.querySelector(".playbtn"); pb.onclick=(e)=>{ e.stopPropagation(); collapsedCardId=null; playInCard(el,card); }; pb.addEventListener("pointerdown",e=>e.stopPropagation()); }
@@ -896,7 +985,21 @@ function renderDeck(){
     deck.appendChild(el);
   });
   // auto-load the top card's video (feed-style) unless it was collapsed
-  if(autoplay){ const top=store[currentDeck][0]; const el=deck.querySelector(".card:last-child"); if(top && el && embedFor(top.url) && collapsedCardId!==top.id && !el.classList.contains("playing")) playInCard(el,top); }
+  // Autoplay is DEBOUNCED: only load the TikTok embed once you've settled on a
+  // card for a beat. Rapid swiping no longer fires an embed load for every card
+  // you pass — that flood is what makes TikTok throttle the player ("Video
+  // currently unavailable") after a run of quick loads.
+  clearTimeout(autoplayTimer);
+  if(autoplay){
+    const top=store[currentDeck][0];
+    if(top && embedFor(top.url) && collapsedCardId!==top.id){
+      autoplayTimer=setTimeout(()=>{
+        if(!autoplay) return;
+        const cur=store[currentDeck][0], curEl=deck.querySelector(".card:last-child");
+        if(cur && top && cur.id===top.id && curEl && !curEl.classList.contains("playing") && collapsedCardId!==cur.id) playInCard(curEl,cur);
+      },500);
+    }
+  }
   updateCounts();
 }
 function attachDrag(el,card){
@@ -927,12 +1030,19 @@ function programSwipe(dir){
   setTimeout(()=>{ dir>0?onKeep(card):onPass(card); },230);
 }
 let pendingKeep=null,pendingPass=null,pendingDeck="feed";
-function onKeep(card){ collapsedCardId=null; pendingDeck=currentDeck; store[currentDeck]=store[currentDeck].filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
-function commitKeep(format){ const card=pendingKeep; if(!card)return; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,savedAt:Date.now()}); store.history.push({type:"keep",card,format,deck:pendingDeck}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); bumpSort(); }
+function onKeep(card){ collapsedCardId=null; pendingDeck=currentDeck; store[currentDeck]=store[currentDeck].filter(c=>c.id!==card.id); pendingKeep=card; renderDeck(); if(card.format && card.format!==MISC){ commitKeep(card.format); } else { openSheet("sheetFormat"); } }
+function commitKeep(format){ const card=pendingKeep; if(!card)return; const extra=(card.format===MISC)?{reclassifiedFrom:MISC}:{}; (store.bank[format]||(store.bank[format]=[])).unshift({...card,format,...extra,savedAt:Date.now()}); store.history.push({type:"keep",card,format,deck:pendingDeck}); pendingKeep=null; save(); closeSheets(); toast(`Filed to “${format}”`,"green"); updateCounts(); bumpSort(); }
+function cancelPendingKeep(){ if(!pendingKeep)return; const d=pendingDeck||currentDeck; store[d]=store[d]||[]; store[d].unshift(pendingKeep); pendingKeep=null; renderDeck(); }
 function onPass(card){ collapsedCardId=null; pendingDeck=currentDeck; store[currentDeck]=store[currentDeck].filter(c=>c.id!==card.id);
-  if(currentDeck==="fyp"){ renderDeck(); return; } // trending skip is ephemeral — nothing saved
-  pendingPass=card; selectedReason=null; document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); openSheet("sheetPass"); }
-function commitPass(withNote){ const card=pendingPass; if(!card)return; const note=withNote?(selectedReason||document.getElementById("passNote").value.trim()||""):""; store.passed.unshift({...card,reason:note,passedAt:Date.now()}); store.history.push({type:"pass",card,deck:pendingDeck}); pendingPass=null; save(); closeSheets(); toast(note?`Passed — “${note}”`:(pendingDeck==="recommended"?"Skipped":"Passed"),"red"); updateCounts(); bumpSort(); }
+  pendingPass=card; selectedReasons.clear(); document.getElementById("passNote").value=""; document.querySelectorAll("#reasonChips .reason").forEach(r=>r.classList.remove("sel")); renderDeck(); openSheet("sheetPass"); }
+function commitPass(withNote){ const card=pendingPass; if(!card)return;
+  let reason="";
+  if(withNote){
+    const chips=REASONS.filter(r=>selectedReasons.has(r)); // canonical order
+    const note=document.getElementById("passNote").value.trim();
+    reason=[chips.join(", "), note].filter(Boolean).join(" — ");
+  }
+  store.passed.unshift({...card,reason,passedAt:Date.now()}); store.history.push({type:"pass",card,deck:pendingDeck}); pendingPass=null; save(); closeSheets(); toast(reason?`Passed — “${reason}”`:"Passed","red"); updateCounts(); bumpSort(); }
 function undo(){ const last=store.history.pop(); if(!last){toast("Nothing to undo","amber");return;} if(last.type==="keep"){ store.bank[last.format]=(store.bank[last.format]||[]).filter(c=>c.id!==last.card.id); if(store.bank[last.format]&&!store.bank[last.format].length)delete store.bank[last.format]; } else { store.passed=store.passed.filter(c=>c.id!==last.card.id); } const d=last.deck||"feed"; store[d].unshift(last.card); save(); renderDeck(); closeSheets(); toast("Brought it back","amber"); }
 
 /* ============================================================= *
@@ -988,7 +1098,7 @@ function removeFromBank(card){ Object.keys(store.bank).forEach(k=>{ store.bank[k
 let impFormat=null, addFormat=null;
 function buildFormatPicker(containerId, onPick){
   const c=document.getElementById(containerId); if(!c)return; c.innerHTML="";
-  FORMATS.forEach(f=>{ const b=document.createElement("button"); b.type="button"; b.className="fchip"; b.dataset.name=f.name; b.innerHTML=`<span>${f.icon}</span> ${esc(f.name)}`; b.onclick=()=>{ c.querySelectorAll(".fchip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); onPick(f.name); }; c.appendChild(b); });
+  [...FORMATS, MISC_OPT].forEach(f=>{ const b=document.createElement("button"); b.type="button"; b.className="fchip"+(f.name===MISC?" fchip-misc":""); b.dataset.name=f.name; b.innerHTML=`<span>${f.icon}</span> ${esc(f.name)}`; b.onclick=()=>{ c.querySelectorAll(".fchip").forEach(x=>x.classList.remove("sel")); b.classList.add("sel"); onPick(f.name); }; c.appendChild(b); });
 }
 
 /* urgent / trend toggle */
@@ -1000,27 +1110,112 @@ function sortFeed(){ store[currentDeck].sort((a,b)=> (((b&&b.urgent)?1:0)-((a&&a
 /* ============================================================= *
  *  SUBMITTED (status of every submission)
  * ============================================================= */
+let subView="status";          // "status" | "day"
+let subWhoEmail=null;           // admin: whose submissions to show (null = self)
+function fmtDay(ts){ return ts? new Date(ts).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}) : "Unknown date"; }
+function submissionDate(c){ return c.submittedAt||c.savedAt||c.copiedAt||c.passedAt||0; }
+document.querySelectorAll("#subViewSeg button").forEach(b=>b.onclick=()=>{ subView=b.dataset.v; document.querySelectorAll("#subViewSeg button").forEach(x=>x.classList.toggle("active",x===b)); renderSubmitted(); });
+function fillSubWho(){
+  const sel=document.getElementById("subWho"); if(!sel)return;
+  if(!isAdmin()){ sel.hidden=true; return; }
+  sel.hidden=false;
+  const me=(AUTH.user.email||"").toLowerCase();
+  const opts=[`<option value="">Me — ${esc(AUTH.user.name||me)}</option>`];
+  (USERS||[]).forEach(u=>{ if((u.email||"").toLowerCase()===me) return; opts.push(`<option value="${esc(u.email)}"${subWhoEmail===u.email?" selected":""}>${esc(u.name||u.email)}</option>`); });
+  sel.innerHTML=opts.join("");
+  sel.onchange=()=>{ subWhoEmail=sel.value||null; renderSubmitted(); };
+}
+async function changeSubmissionFormat(card){
+  // simple prompt-style picker via the format sheet would be heavy; use a lightweight inline menu
+  const choice=await pickFormatInline(card.format);
+  if(!choice || choice===card.format) return;
+  try{
+    const r=await api("/api/my-submission",{method:"POST",body:JSON.stringify({id:card.id,format:choice})});
+    const d=await r.json(); if(!r.ok)throw new Error(d.error||"Couldn't update");
+    const c=(store.feed||[]).find(x=>x.id===card.id); if(c) c.format=choice;
+    toast(`Format changed to “${choice}”`,"green"); renderSubmitted();
+  }catch(e){ toast(e.message||"Couldn't change format","amber"); }
+}
+function pickFormatInline(current){
+  return new Promise(res=>{
+    const sc=document.getElementById("scrim"); const sheet=document.getElementById("sheetFmtSwitch");
+    const grid=document.getElementById("fmtSwitchGrid"); grid.innerHTML="";
+    [...FORMATS, MISC_OPT].forEach(f=>{ const b=document.createElement("button"); b.className="fchip"+(f.name===current?" sel":"")+(f.name===MISC?" fchip-misc":""); b.innerHTML=`<span>${f.icon}</span> ${esc(f.name)}`; b.onclick=()=>{ done(f.name); }; grid.appendChild(b); });
+    function done(v){ sheet.classList.remove("open"); sc.classList.remove("open"); document.getElementById("fmtSwitchCancel").onclick=null; res(v); }
+    document.getElementById("fmtSwitchCancel").onclick=()=>done(null);
+    sc.classList.add("open"); sheet.classList.add("open");
+  });
+}
 function renderSubmitted(){
-  const pending=(store.feed||[]);
-  const approved=[]; Object.entries(store.bank||{}).forEach(([fmt,arr])=>arr.forEach(c=>approved.push({...c,format:c.format||fmt})));
-  Object.values(store.archive||{}).forEach(arr=>arr.forEach(c=>approved.push({...c})));
-  const passed=(store.passed||[]);
-  const total=pending.length+approved.length+passed.length;
-  document.getElementById("subTotal").textContent=`${total} total`;
   const wrap=document.getElementById("subList"); wrap.innerHTML="";
-  if(!total){ wrap.innerHTML=`<div class="empty-note">No submissions yet. Paste links in the Submit tab to get started.</div>`; return; }
-  const section=(label,cards,cls,status)=>{
-    if(!cards.length)return;
-    const lbl=document.createElement("div"); lbl.className="section-label"; lbl.innerHTML=`${label} <span class="cnt">${cards.length}</span>`; wrap.appendChild(lbl);
-    cards.forEach(c=>{ const p=PLAT[c.platform]||PLAT.tiktok; const el=document.createElement("div"); el.className="subrow";
-      const meta=[c.format?esc(c.format):"", c.submittedBy?("by "+esc(c.submittedBy)):"", c.reason?('“'+esc(c.reason)+'”'):""].filter(Boolean).join(" · ");
-      el.innerHTML=`<span class="sdot" style="background:${c.urgent?'var(--red)':p.color}"></span><div class="sm"><div class="sn">${c.urgent?'🚨 ':''}${esc(c.title)}</div><div class="ss">${meta||p.label}</div></div><span class="sstatus ${cls}">${status}</span>`;
-      el.onclick=()=>{ if(c.url)openLightbox(c); else toast("No link on this one","amber"); };
-      wrap.appendChild(el); });
+  const meEmail=(AUTH.user&&AUTH.user.email||"").toLowerCase();
+  const meName=(AUTH.user&&AUTH.user.name||"").toLowerCase();
+  const viewingEmail = (isAdmin() && subWhoEmail) ? subWhoEmail.toLowerCase() : meEmail;
+  const isSelf = viewingEmail===meEmail;
+  const viewingName = isSelf ? (AUTH.user.name||meEmail) : ((USERS||[]).find(u=>(u.email||"").toLowerCase()===viewingEmail)?.name || viewingEmail);
+  const owns=c=>{ if(!c)return false; const e=(c.submittedByEmail||"").toLowerCase(); if(e)return e===viewingEmail; return isSelf && !!meName && (c.submittedBy||"").toLowerCase()===meName; };
+  fillSubWho();
+  const pending=(store.feed||[]).filter(owns).map(c=>({...c,_st:"pending"}));
+  const approved=[]; Object.entries(store.bank||{}).forEach(([fmt,arr])=>arr.forEach(c=>{ if(owns(c)) approved.push({...c,format:c.format||fmt,_st:"approved"}); }));
+  const used=[]; Object.entries(store.archive||{}).forEach(([fmt,arr])=>arr.forEach(c=>{ if(owns(c)) used.push({...c,format:c.format||fmt,_st:"used"}); }));
+  const passed=(store.passed||[]).filter(owns).map(c=>({...c,_st:"passed"}));
+  const all=[...pending,...approved,...used,...passed];
+  const total=all.length;
+  const usageRate = total ? Math.round(used.length/total*100) : 0;
+  document.getElementById("subTotal").textContent=`${total} submitted`;
+  if(!total){ wrap.innerHTML=`<div class="empty-note">${isSelf?"You haven't":esc(viewingName)+" hasn't"} submitted anything yet.</div>`; return; }
+  // stats header
+  const whoTxt = isSelf ? "your" : esc(viewingName)+"’s";
+  const stats=document.createElement("div"); stats.className="sub-stats";
+  stats.innerHTML=`<div class="ss-top">
+      <div class="ss-hero"><div class="ss-pct">${usageRate}%</div></div>
+      <div class="ss-sub">of ${whoTxt} <b>${total}</b> submitted video${total===1?"":"s"} ${used.length===1?"has":"have"} been <b>used</b> — ${used.length} used so far.</div>
+    </div>
+    <div class="ss-break">
+      <span class="ss-chip"><b>${pending.length}</b> pending</span>
+      <span class="ss-chip"><b>${approved.length}</b> approved</span>
+      <span class="ss-chip used"><b>${used.length}</b> used</span>
+      <span class="ss-chip"><b>${passed.length}</b> not approved</span>
+    </div>`;
+  wrap.appendChild(stats);
+  // Notification: unlabeled (no-format) pending videos need a format before review.
+  const unlabeled=pending.filter(c=>!c.format);
+  if(unlabeled.length){
+    const banner=document.createElement("div"); banner.className="label-banner";
+    banner.innerHTML=`<span class="lb-ic">⚠️</span><div><b>${unlabeled.length} of ${isSelf?"your":esc(viewingName)+"’s"} video${unlabeled.length===1?"":"s"} ${unlabeled.length===1?"has":"have"} no format.</b> These were mass-imported without a label and can't be reviewed until sorted. Tap <b>⇄ format</b> on each below to label ${unlabeled.length===1?"it":"them"} (use <b>Miscellaneous</b> if unsure).</div>`;
+    wrap.appendChild(banner);
+  }
+  const STATUS={pending:["pending","Pending"],approved:["approved","Approved"],used:["used","Used"],passed:["passed","Not appr."]};
+  const rowEl=(c)=>{
+    const p=PLAT[c.platform]||PLAT.tiktok; const el=document.createElement("div"); el.className="subrow";
+    const fmtLabel = c.reclassifiedFrom ? `${esc(c.reclassifiedFrom)} → ${esc(c.format)}` : (c.format?esc(c.format):"");
+    const dateStr = fmtDay(submissionDate(c));
+    const usedNote = (c._st==="used" && c.copiedAt) ? ("used "+new Date(c.copiedAt).toLocaleDateString()) : "";
+    const meta=[dateStr, fmtLabel, c.reason?('note: “'+esc(c.reason)+'”'):"", usedNote].filter(Boolean).join(" · ");
+    const canSwitch = c._st==="pending" && (isSelf || isAdmin());
+    const [cls,label]=STATUS[c._st];
+    el.innerHTML=`<span class="sdot" style="background:${c.urgent?'var(--red)':p.color}"></span><div class="sm"><div class="sn">${c.urgent?'🚨 ':''}${esc(c.title)}</div><div class="ss">${meta||p.label}</div></div>${canSwitch?`<button class="fmt-switch" title="Change format">⇄ format</button>`:""}<span class="sstatus ${cls}">${label}</span>`;
+    if(canSwitch){ const sw=el.querySelector(".fmt-switch"); sw.onclick=(e)=>{ e.stopPropagation(); changeSubmissionFormat(c); }; }
+    el.onclick=()=>{ if(c.url)openLightbox(c); else toast("No link on this one","amber"); };
+    return el;
   };
-  section("Pending review",pending,"pending","Pending");
-  section("Approved",approved,"approved","Approved");
-  section("Passed",passed,"passed","Passed");
+  if(subView==="day"){
+    // group by submission date, newest first
+    const byDay={};
+    all.forEach(c=>{ const k=fmtDay(submissionDate(c)); (byDay[k]=byDay[k]||[]).push(c); });
+    const days=Object.keys(byDay).sort((a,b)=> (byDay[b][0]?submissionDate(byDay[b][0]):0)-(byDay[a][0]?submissionDate(byDay[a][0]):0));
+    days.forEach(day=>{
+      const cards=byDay[day].sort((a,b)=>submissionDate(b)-submissionDate(a));
+      const lbl=document.createElement("div"); lbl.className="section-label"; lbl.innerHTML=`${esc(day)} <span class="cnt">${cards.length}</span>`; wrap.appendChild(lbl);
+      cards.forEach(c=>wrap.appendChild(rowEl(c)));
+    });
+  } else {
+    const section=(label,cards)=>{ if(!cards.length)return; const lbl=document.createElement("div"); lbl.className="section-label"; lbl.innerHTML=`${label} <span class="cnt">${cards.length}</span>`; wrap.appendChild(lbl); cards.sort((a,b)=>submissionDate(b)-submissionDate(a)).forEach(c=>wrap.appendChild(rowEl(c))); };
+    section("Pending review",pending);
+    section("Approved — ready to use",approved);
+    section("Used",used);
+    section("Not approved",passed);
+  }
 }
 
 /* ============================================================= *
@@ -1163,17 +1358,27 @@ document.querySelectorAll("#importMode button").forEach(b=>b.onclick=()=>{
   document.getElementById("importBulk").hidden=!bulk;
   const rp=document.getElementById("recentPanel"); if(rp) rp.style.display=bulk?"none":"";
   document.getElementById("bulkAdminOpts").hidden=!isAdmin();
+  if(bulk && isAdmin()){ if(!USERS.length){ loadUsers().then(fillBulkCredit); } else { fillBulkCredit(); } }
 });
+function fillBulkCredit(){
+  const sel=document.getElementById("bulkCredit"); if(!sel||!AUTH.user) return;
+  const me=(AUTH.user.email||"").toLowerCase();
+  const opts=[`<option value="">Me — ${esc(AUTH.user.name||AUTH.user.email)}</option>`];
+  for(const u of USERS){ if((u.email||"").toLowerCase()===me) continue; opts.push(`<option value="${esc(u.email)}">${esc(u.name||u.email)}</option>`); }
+  sel.innerHTML=opts.join("");
+}
 let bulkToBank=false;
 document.getElementById("bulkToBank").onclick=function(){ bulkToBank=!bulkToBank; this.classList.toggle("on",bulkToBank); };
 function mapDocFormat(h){
   const s=(h||"").toLowerCase();
   if(/hair/.test(s)) return "Hair transformations";
   if(/\birl\b/.test(s)) return "IRL";
-  if(/shoot/.test(s)) return "UGC shoots";
-  if(/voice|yap|\btalk|\bvo\b/.test(s)) return "Yaps";
+  if(/shoot/.test(s)) return "Shoots";
+  if(/voice.?over|\bvo\b|narrat/.test(s)) return "Voice-over";
+  if(/yap|\btalk/.test(s)) return "Yaps";
   if(/he.?ugc|high.?effort|\beffort/.test(s)) return "High-effort UGC";
   if(/ugc/.test(s)) return "High-effort UGC";
+  if(/misc|uncategor|\bother\b|unsure|not sure/.test(s)) return MISC; // → Miscellaneous escape-hatch
   return null; // unmatched header -> videos go to review uncategorized
 }
 function parseBulk(text){
@@ -1196,15 +1401,20 @@ document.getElementById("bulkImport").onclick=async()=>{
   const err=document.getElementById("bulkErr"); err.classList.remove("show");
   const {items,counts}=parseBulk(document.getElementById("bulkText").value);
   if(!items.length){ err.textContent="No video links found — paste a list with links under format headers."; err.classList.add("show"); return; }
+  const unlabeled=items.filter(it=>!it.format).length;
+  if(unlabeled){ err.textContent=`You must label before mass importing — ${unlabeled} link${unlabeled===1?"":"s"} ${unlabeled===1?"has":"have"} no format above ${unlabeled===1?"it":"them"}. Put a format name (or “Miscellaneous”) on the line above each block of links.`; err.classList.add("show"); return; }
   const btn=document.getElementById("bulkImport"); btn.disabled=true; btn.textContent=`Importing ${items.length}…`;
   try{
-    const r=await api("/api/bulk-import",{method:"POST",body:JSON.stringify({items,toBank:bulkToBank&&isAdmin()})});
+    const creditTo=(isAdmin()&&document.getElementById("bulkCredit")?document.getElementById("bulkCredit").value:"")||undefined;
+    const r=await api("/api/bulk-import",{method:"POST",body:JSON.stringify({items,toBank:bulkToBank&&isAdmin(),creditTo})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
     const parts=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([k,n])=>`${n} · ${k}`).join("   ");
     const dest = d.addedBank ? `${d.addedBank} to bank, ${d.addedFeed} to review` : `${d.total} to review`;
-    document.getElementById("bulkResult").innerHTML=`<div class="okbox show" style="margin-top:12px"><b>Imported ${d.total} video${d.total===1?"":"s"}</b> — ${dest}.<br><span style="color:var(--ink-faint);font-size:11.5px">${esc(parts)}</span></div>`;
+    const credit = d.creditedTo ? ` · credited to <b>${esc(d.creditedTo)}</b>` : "";
+    const dupes = d.skippedDuplicates ? `<br><span style="color:var(--amber-2);font-size:11.5px">Skipped ${d.skippedDuplicates} — already submitted by you or another teammate.</span>` : "";
+    document.getElementById("bulkResult").innerHTML=`<div class="okbox show" style="margin-top:12px"><b>Imported ${d.total} video${d.total===1?"":"s"}</b> — ${dest}${credit}.<br><span style="color:var(--ink-faint);font-size:11.5px">${esc(parts)}</span>${dupes}</div>`;
     document.getElementById("bulkText").value="";
-    toast(`Imported ${d.total} videos`,"green");
+    toast(d.skippedDuplicates?`Imported ${d.total} · skipped ${d.skippedDuplicates} already submitted`:`Imported ${d.total} videos`,"green");
   }catch(ex){ err.textContent=ex.message||"Import failed"; err.classList.add("show"); }
   finally{ btn.disabled=false; btn.textContent="Import list"; }
 };
@@ -1372,23 +1582,21 @@ function genPass(){ const all="abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ2
 /* ============================================================= *
  *  ADD sheet (admin quick-add)
  * ============================================================= */
-let addTarget="feed";
-function openAdd(){ addTarget = currentDeck==="recommended" ? "recommended" : "feed"; const rec=addTarget==="recommended";
+function openAdd(){
   document.getElementById("addUrl").value=""; document.getElementById("addTitle").value=""; addFormat=null; document.querySelectorAll("#addFormats .fchip").forEach(x=>x.classList.remove("sel")); addUrgent=false; document.getElementById("addUrgent").classList.remove("on");
-  document.getElementById("addSheetTitle").innerHTML = rec ? `Add to <span class="em">For You</span>` : `Add a <span class="em">reference</span>`;
-  document.getElementById("addFormatLabel").innerHTML = rec ? `Format <span style="color:var(--ink-faint)">— optional</span>` : "Format";
-  document.getElementById("addConfirm").textContent = rec ? "Add to For You" : "Add to feed";
+  document.getElementById("addSheetTitle").innerHTML = `Add a <span class="em">reference</span>`;
+  document.getElementById("addFormatLabel").innerHTML = "Format";
+  document.getElementById("addConfirm").textContent = "Add to feed";
   openSheet("sheetAdd"); setTimeout(()=>document.getElementById("addUrl").focus(),300); }
 async function commitAdd(){
   const url=document.getElementById("addUrl").value.trim(); const title=document.getElementById("addTitle").value.trim();
   if(!/^https?:\/\//i.test(url)){ toast("Paste a valid link","amber"); return; }
-  if(addTarget!=="recommended" && !addFormat){ toast("Pick a format","amber"); return; }
+  if(!addFormat){ toast("Pick a format","amber"); return; }
   const btn=document.getElementById("addConfirm"); const label=btn.textContent; btn.disabled=true; btn.textContent="Adding…";
   try{
-    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:addFormat,urgent:addUrgent,target:addTarget})});
+    const r=await api("/api/import",{method:"POST",body:JSON.stringify({url,title,format:addFormat,urgent:addUrgent})});
     const d=await r.json(); if(!r.ok)throw new Error(d.error||"Failed");
-    if(addTarget==="recommended"){ if(!store.recommended.some(c=>c.id===d.card.id)) store.recommended.unshift(d.card); closeSheets(); switchView("fyp"); toast("Added to For You","green"); }
-    else { if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card); closeSheets(); switchView("swipe"); renderDeck(); toast(`Added a ${PLAT[d.card.platform].label} reference`,"green"); }
+    if(!store.feed.some(c=>c.id===d.card.id)) store.feed.unshift(d.card); closeSheets(); switchView("swipe"); renderDeck(); toast(`Added a ${PLAT[d.card.platform].label} reference`,"green");
   }catch(e){ toast(e.message||"Couldn't add","amber"); }
   finally{ btn.disabled=false; btn.textContent=label; }
 }
@@ -1425,26 +1633,87 @@ function embedFor(url){
   return null;
 }
 const PLAY_SVG='<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>';
-function playInCard(el,card){
-  const emb=embedFor(card.url);
-  if(!emb){ if(card.url)window.open(card.url,"_blank"); else toast("No link to play","amber"); return; }
+// Some links (e.g. tiktok.com/t/… short links from bulk import) can't be embedded
+// until they're resolved to the canonical /video/<id> URL. Resolve on demand,
+// cache the result on the card, and (for admins) persist it so it's instant next time.
+// Session-only thumbnail/caption cache (keyed by card id). Kept OFF the card
+// object so these signed, soon-expiring TikTok URLs never get persisted.
+const thumbTried=new Set(), sessionThumbs={};
+function thumbFor(card){ return card && (card.img || (sessionThumbs[card.id]&&sessionThumbs[card.id].img)) || ""; }
+function titleFor(card){ if(!card) return ""; const st=sessionThumbs[card.id]; if(st&&st.title && /^(imported|bulk-imported) reference$/i.test(card.title||"")) return st.title; return card.title||""; }
+async function enrichThumb(card){
+  if(!card || card.img || card._noThumb || !card.url || thumbTried.has(card.id) || sessionThumbs[card.id]) return;
+  if(!/tiktok\.com/.test(card.url)) return;
+  thumbTried.add(card.id);
+  try{
+    const r=await api("/api/thumb?url="+encodeURIComponent(card.url));
+    const d=await r.json();
+    if(d.ok && d.thumbnail){ sessionThumbs[card.id]={img:d.thumbnail, title:d.title||""}; if(!hidden("view-swipe") && !document.querySelector(".card.playing") && !dragState) renderDeck(); }
+    else card._noThumb=true;
+  }catch(e){ card._noThumb=true; }
+}
+async function embedForResolved(card){
+  let emb=embedFor(card.url);
+  if(emb || card._noEmbed) return emb;
+  try{
+    const r=await api("/api/resolve?url="+encodeURIComponent(card.url));
+    const d=await r.json();
+    if(r.ok && d.url && d.url!==card.url){
+      card.url=d.url;
+      emb=embedFor(card.url);
+      if(emb) save(); // persist the playable URL (no-op for non-admins)
+    }
+  }catch(e){}
+  if(!emb) card._noEmbed=true;
+  return emb;
+}
+async function playInCard(el,card){
   const media=el.querySelector(".media");
+  let emb=embedFor(card.url);
+  if(!emb){
+    el.classList.add("playing");
+    media.innerHTML=`<div class="embed-loading"><div class="spin"></div>Loading video…</div>`;
+    emb=await embedForResolved(card);
+    if(!emb){ el.classList.remove("playing"); if(card.url)window.open(card.url,"_blank"); else toast("No link to play","amber"); return; }
+  }
   media.innerHTML=`<iframe class="embed-frame" src="${esc(emb.src)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
   el.classList.add("playing");
   const close=document.createElement("div"); close.className="embed-close"; close.textContent="✕";
   close.onclick=(e)=>{ e.stopPropagation(); collapsedCardId=card.id; renderDeck(); };
   el.appendChild(close);
+  // Escape hatch: if TikTok throttles the embed ("Video currently unavailable"),
+  // this opens the real video on TikTok in a new tab.
+  if(card.url){ const open=document.createElement("a"); open.className="embed-open"; open.href=card.url; open.target="_blank"; open.rel="noopener"; open.title="Open on TikTok"; open.innerHTML="↗ TikTok"; open.onclick=(e)=>e.stopPropagation(); el.appendChild(open); }
 }
 /* bank lightbox */
-function openLightbox(card){
-  const emb=embedFor(card.url);
-  if(!emb){ if(card.url)window.open(card.url,"_blank"); else toast("No link on this one","amber"); return; }
+let lbOpen=false;
+function markLbOpen(){ const lb=document.getElementById("lightbox"); lb.classList.add("open"); if(!lbOpen){ lbOpen=true; try{ history.pushState({sift_lb:1},""); }catch(e){} } }
+async function openLightbox(card){
   const lb=document.getElementById("lightbox");
+  let emb=embedFor(card.url);
+  if(!emb){
+    document.getElementById("lbFrame").innerHTML=`<div class="embed-loading"><div class="spin"></div>Loading video…</div>`;
+    document.getElementById("lbOpen").href=card.url||"#";
+    markLbOpen();
+    emb=await embedForResolved(card);
+    if(!emb){ closeLightbox(); if(card.url)window.open(card.url,"_blank"); else toast("No link on this one","amber"); return; }
+  }
   document.getElementById("lbFrame").innerHTML=`<iframe src="${esc(emb.src)}" allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowfullscreen></iframe>`;
   document.getElementById("lbOpen").href=card.url;
-  lb.classList.add("open");
+  markLbOpen();
 }
-function closeLightbox(){ document.getElementById("lightbox").classList.remove("open"); document.getElementById("lbFrame").innerHTML=""; }
+function closeLightbox(){
+  const lb=document.getElementById("lightbox");
+  if(!lb.classList.contains("open"))return;
+  lb.classList.remove("open"); document.getElementById("lbFrame").innerHTML="";
+  // pop the history entry we pushed, so the URL/back-stack stays clean
+  if(lbOpen){ lbOpen=false; if(history.state && history.state.sift_lb){ try{ history.back(); }catch(e){} } }
+}
+// Browser back closes the video instead of leaving the app
+window.addEventListener("popstate",()=>{
+  const lb=document.getElementById("lightbox");
+  if(lb.classList.contains("open")){ lbOpen=false; lb.classList.remove("open"); document.getElementById("lbFrame").innerHTML=""; }
+});
 
 /* ============================================================= *
  *  SHEETS + wiring
@@ -1453,13 +1722,13 @@ const scrim=document.getElementById("scrim");
 function openSheet(id){ scrim.classList.add("open"); document.getElementById(id).classList.add("open"); }
 function closeSheets(){
   scrim.classList.remove("open"); document.querySelectorAll(".sheet").forEach(s=>s.classList.remove("open"));
-  if(pendingKeep){ commitKeep(pendingKeep.format||"UGC"); }
+  if(pendingKeep){ cancelPendingKeep(); }
   if(pendingPass){ commitPass(false); }
 }
 scrim.addEventListener("click",closeSheets);
 function buildFormatGrid(){ const g=document.getElementById("fmtGrid"); g.innerHTML=""; FORMATS.forEach(f=>{ const b=document.createElement("button"); b.className="fmt-opt"; b.innerHTML=`<span class="ic">${f.icon}</span><span class="meta">${esc(f.name)}<small>${esc(f.note)}</small></span>`; b.onclick=()=>commitKeep(f.name); g.appendChild(b); }); }
-let selectedReason=null;
-function buildReasons(){ const c=document.getElementById("reasonChips"); c.innerHTML=""; REASONS.forEach(r=>{ const b=document.createElement("button"); b.className="reason"; b.textContent=r; b.onclick=()=>{ if(selectedReason===r){selectedReason=null;b.classList.remove("sel");}else{selectedReason=r;document.querySelectorAll("#reasonChips .reason").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");} }; c.appendChild(b); }); }
+let selectedReasons=new Set();
+function buildReasons(){ const c=document.getElementById("reasonChips"); c.innerHTML=""; REASONS.forEach(r=>{ const b=document.createElement("button"); b.className="reason"; b.textContent=r; b.onclick=()=>{ if(selectedReasons.has(r)){selectedReasons.delete(r);b.classList.remove("sel");}else{selectedReasons.add(r);b.classList.add("sel");} }; c.appendChild(b); }); }
 
 document.getElementById("btnLike").onclick=()=>programSwipe(1);
 document.getElementById("btnNope").onclick=()=>programSwipe(-1);
@@ -1479,10 +1748,42 @@ window.addEventListener("keydown",e=>{
   if(e.key==="ArrowRight")programSwipe(1); else if(e.key==="ArrowLeft")programSwipe(-1); else if(e.key.toLowerCase()==="z")undo();
 });
 
-function updateCounts(){ const total=Object.values(store.bank).reduce((a,b)=>a+b.length,0); const bb=document.getElementById("bankBadge"); if(bb)bb.textContent=total; }
+function updateCounts(){ const total=Object.values(store.bank).reduce((a,b)=>a+b.length,0); const bb=document.getElementById("bankBadge"); if(bb)bb.textContent=total; updateSubBadge(); }
+function myUnlabeledCount(){
+  const me=(AUTH.user&&AUTH.user.email||"").toLowerCase(), meName=(AUTH.user&&AUTH.user.name||"").toLowerCase();
+  const mine=c=>{ if(!c)return false; const e=(c.submittedByEmail||"").toLowerCase(); if(e)return e===me; return !!meName && (c.submittedBy||"").toLowerCase()===meName; };
+  return (store.feed||[]).filter(c=>mine(c) && !c.format).length;
+}
+function updateSubBadge(){ const n=myUnlabeledCount(); const el=document.getElementById("subBadge"); if(!el)return; el.textContent=n; el.style.display=n>0?"":"none"; el.classList.toggle("alert",n>0); }
 function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[m]));}
 let toastT;
 function toast(msg,kind){ const el=document.getElementById("toast"); document.getElementById("toastMsg").textContent=msg; el.className="toast show"+(kind?` ${kind}`:""); clearTimeout(toastT); toastT=setTimeout(()=>el.classList.remove("show"),2400); }
+
+/* Auto-update: when a new version is deployed, the HTML's ETag changes. Detect it
+   and reload (only when idle) so nobody stays stuck on a stale cached build. */
+let _appEtag=null, _updatePending=false;
+function _safeReload(){
+  try{
+    return !document.querySelector(".sheet.open")
+      && !document.querySelector(".card.playing")
+      && !document.getElementById("lightbox").classList.contains("open")
+      && !dragState
+      && !(document.activeElement && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName));
+  }catch(e){ return true; }
+}
+async function checkForUpdate(){
+  try{
+    const r=await fetch("/",{method:"HEAD",cache:"no-store"});
+    const et=r.headers.get("etag"); if(!et) return;
+    if(_appEtag===null){ _appEtag=et; return; }
+    if(et!==_appEtag){ _appEtag=et; if(_safeReload()) location.reload(); else _updatePending=true; }
+  }catch(e){}
+}
+function _maybeUpdateNow(){ if(_updatePending && _safeReload()){ location.reload(); } else { checkForUpdate(); } }
+window.addEventListener("focus",_maybeUpdateNow);
+document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") _maybeUpdateNow(); });
+setInterval(checkForUpdate, 4*60*1000);
+checkForUpdate();
 
 boot();
 </script>
